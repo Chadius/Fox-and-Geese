@@ -1,0 +1,25 @@
+#:kivy 1.9.1
+
+<GameController>:
+    id: fox_and_geese
+    canvas:
+        Color:
+            hsv: 0.5,0.2,0.5
+        Rectangle:
+            pos: 0,0
+            size: self.width, self.height
+    TitleScreen:
+        disabled: False
+        opacity: 1.0
+    MissionController:
+        disabled: True
+        opacity: 0.0
+
+<TitleScreen>:
+    id: title_screen
+    Label:
+        text: "FOX AND GEESE"
+        size_hint: (1, 1.5)
+
+<MissionController>:
+    id: mission_controller

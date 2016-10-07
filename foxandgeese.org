@@ -1,0 +1,31 @@
+* Make a game in a year
+I want to make a game fully polished within a year. The only way to do that is to make the gameplay simple enough I can spend my time on UI and polish.
+
+Readying the history of games gave me an idea I could steal- I mean copy: Fox and Geese.
+
+You control the Fox on a map with several Geese.
+You all move at the same time, like a chessboard.
+If 3 or more Geese touch you at the same time, you lose.
+If you touch a Goose, you kill it.
+
+The mission is to kill all the Geese before they kill you.
+
+* Style
+A cops and robbers motif? The Fox Thief eludes the Goose Robbers?
+A pulp superhero motif? The Foxman escapes the Goose Mob?
+
+* Kivy Screen control
+Game Controller is always running.
+
+** Title Screen
+Title Screen Controller shows the title screen along with a "Start Game" button.
+
+** Mission Controller
+Game Screen has a map. It has a Title Screen button.
+After you win or lose, only the Title Screen button is available.
+During a map, you have up down left right buttons.
+* Timetable
+1 month: Proof of Concept.
+3 months: Builds on multiple platforms (Alpha?)
+6 months: Prototype (Beta?)
+1 year: Game complete ready to ship.
