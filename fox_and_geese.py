@@ -11,7 +11,9 @@ class TitleScreen(FloatLayout):
     pass
 
 class GameController(FloatLayout):
-    pass
+    def start_game(self):
+        # Initialize a new game, then start it.
+        pass
 
 class FoxAndGeeseApp(App):
     def build(self):

@@ -1,25 +1,92 @@
 #:kivy 1.9.1
 
 <GameController>:
-    id: fox_and_geese
-    canvas:
-        Color:
-            hsv: 0.5,0.2,0.5
-        Rectangle:
-            pos: 0,0
-            size: self.width, self.height
-    TitleScreen:
-        disabled: False
-        opacity: 1.0
-    MissionController:
-        disabled: True
-        opacity: 0.0
+	id: fox_and_geese
+	canvas:
+		Color:
+			hsv: 0.5,0.2,0.5
+		Rectangle:
+			pos: 0,0
+			size: self.width, self.height
+	TitleScreen:
+		disabled: False
+		opacity: 0.0
+	MissionController:
+		disabled: False
+		opacity: 1.0
 
 <TitleScreen>:
-    id: title_screen
-    Label:
-        text: "FOX AND GEESE"
-        size_hint: (1, 1.5)
+	id: title_screen
+	Label:
+		text: "FOX AND GEESE"
+		pos_hint: {'center_x': 0.5, 'center_y': 0.8}
+	Button:
+		text: "Start Game"
+		pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+		size_hint: .1,.1
+		on_release: root.start_game()
 
 <MissionController>:
-    id: mission_controller
+	id: mish_con
+	window_width: self.width*0.7
+	bar_width: self.width*0.3
+	bar_height: self.height
+	canvas:
+		Color:
+			hsv: 0.1,0.1,0.4
+		Rectangle:
+			pos: 0, 0
+			size: self.width*0.7, self.height
+		Color:
+			hsv: 0.1,0.1,0.8
+		Rectangle:
+			pos: self.width*0.7,0
+			size: self.width*0.3, self.height
+	BoxLayout:
+		id: gub
+		orientation: 'vertical'
+		pos: (mish_con.window_width,0)
+		size: (mish_con.bar_width,self.height)
+		padding: 10
+		spacing: 10
+		Label:
+			color: 0,0,0,1
+			text: "Fox and Geese"
+			size_hint: 1, 0.5
+		BoxLayout:
+			orientation: 'vertical'
+			padding: 0
+			BoxLayout:
+				orientation: 'horizontal'
+				padding: 0
+				spacing: 0
+				Button:
+					text: "UL"
+				Button:
+					text: "U"
+				Button:
+					text: "UR"
+			BoxLayout:
+				orientation: 'horizontal'
+				padding: 0
+				spacing: 0
+				Button:
+					text: "L"
+				Button:
+					text: "W"
+				Button:
+					text: "R"
+			BoxLayout:
+				orientation: 'horizontal'
+				padding: 0
+				spacing: 0
+				Button:
+					text: "DL"
+				Button:
+					text: "D"
+				Button:
+					text: "DR"
+		Button:
+			text: "Return to title"
+			size_hint: 1,0.3
+
