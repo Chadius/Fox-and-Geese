@@ -9,14 +9,9 @@
 			pos: 0,0
 			size: self.width, self.height
 	TitleScreen:
-		disabled: False
-		opacity: 0.0
-	MissionController:
-		disabled: False
-		opacity: 1.0
+		id: title_screen
 
 <TitleScreen>:
-	id: title_screen
 	Label:
 		text: "FOX AND GEESE"
 		pos_hint: {'center_x': 0.5, 'center_y': 0.8}
@@ -24,7 +19,7 @@
 		text: "Start Game"
 		pos_hint: {'center_x': 0.5, 'center_y': 0.3}
 		size_hint: .1,.1
-		on_release: root.start_game()
+		on_release: root.on_release_go_to_mission()
 
 <MissionController>:
 	id: mish_con
@@ -43,7 +38,6 @@
 			pos: self.width*0.7,0
 			size: self.width*0.3, self.height
 	BoxLayout:
-		id: gub
 		orientation: 'vertical'
 		pos: (mish_con.window_width,0)
 		size: (mish_con.bar_width,self.height)
@@ -89,4 +83,4 @@
 		Button:
 			text: "Return to title"
 			size_hint: 1,0.3
-
+			on_release: root.on_release_return_to_title()
