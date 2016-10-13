@@ -32,7 +32,6 @@ During a map, you have up down left right buttons.
 * Development TODOs
 Vary line thickness by grid size
 Add images for Fox and Geese
-Rename Mission Controller to Mission View
 
 ** Mission Model
 width

@@ -8,11 +8,7 @@ from kivy.clock import Clock
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import Color, Ellipse, Rectangle
 
-class MissionModel():
-    # Information needed to track the status of a mission.
-    def __init__(self):
-        self.grid_width = 5
-        self.grid_height = 5
+from mission import MissionModel
 
 class MissionView(FloatLayout):
     def on_size(self, instance, value):
