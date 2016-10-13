@@ -29,3 +29,16 @@ During a map, you have up down left right buttons.
 3 months: Builds on multiple platforms (Alpha?)
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
+* Development TODOs
+Vary line thickness by grid size
+Add images for Fox and Geese
+Rename Mission Controller to Mission View
+
+** Mission Model
+width
+height
+fox_position - a tuple for coordinates. Down Left is (0,0)
+geese_positions - a tuple of tuples for the geese.
+** Mission Controller
+Move Fox (direction)
+Move Goose (index, direction)

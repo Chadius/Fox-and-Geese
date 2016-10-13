@@ -14,7 +14,7 @@ class MissionModel():
         self.grid_width = 5
         self.grid_height = 5
 
-class MissionController(FloatLayout):
+class MissionView(FloatLayout):
     def on_size(self, instance, value):
         self.draw_grid(MissionModel())
 
@@ -70,11 +70,11 @@ class GameController(FloatLayout):
         # User wants to switch to the title screen.
 
         # Remove the mission controller if it's active.
-        if 'mission_controller' in self.ids:
-            mission_controller = self.ids['mission_controller']
+        if 'mission_view' in self.ids:
+            mission_view = self.ids['mission_view']
 
             # Remove the Mission Screen.
-            self.remove_widget(mission_controller)
+            self.remove_widget(mission_view)
 
         # Prepare a new title screen.
         title_screen_controller = TitleScreen()
@@ -94,11 +94,11 @@ class GameController(FloatLayout):
             self.remove_widget(title_screen)
 
         # Prepare a new mission controller.
-        mission_controller = MissionController()
+        mission_view = MissionView()
 
         # Add it.
-        self.ids['mission_controller'] = mission_controller
-        self.add_widget(mission_controller)
+        self.ids['mission_view'] = mission_view
+        self.add_widget(mission_view)
 
 class FoxAndGeeseApp(App):
     def build(self):
