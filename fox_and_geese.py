@@ -12,6 +12,14 @@ from mission import MissionModel
 
 class MissionView(FloatLayout):
     def on_size(self, instance, value):
+        # Clear the canvas.
+        with self.canvas:
+            Color(self.background_color[0], self.background_color[1], self.background_color[2], mode='hsv')
+            Rectangle(
+                pos=(0,0),
+                size=(self.window_width, self.bar_height)
+            )
+
         self.draw_grid(MissionModel())
 
     def on_release_return_to_title(self):
@@ -20,10 +28,23 @@ class MissionView(FloatLayout):
         # Tell the parent window to switch to the title screen.
         self.parent.switch_to_title()
 
+    def get_grid_line_thickness(self, grid_width, grid_height):
+        # Returns the thickness the lines should be at.
+        number_of_cells = grid_height * grid_width
+        if number_of_cells > 100:
+            return 2
+        elif number_of_cells > 80:
+            return 3
+        elif number_of_cells > 60:
+            return 5
+        elif number_of_cells > 30:
+            return 7
+        return 10
+
     def draw_grid(self, mission_model):
         grid_width = mission_model.grid_width
         grid_height = mission_model.grid_height
-        line_thickness = 10
+        line_thickness = self.get_grid_line_thickness(grid_width, grid_height)
 
         # Draw the grid.
         with self.canvas:

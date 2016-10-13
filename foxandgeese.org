@@ -30,7 +30,6 @@ During a map, you have up down left right buttons.
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
 * Development TODOs
-Vary line thickness by grid size
 Add images for Fox and Geese
 
 ** Mission Model
