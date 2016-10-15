@@ -7,10 +7,22 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import Color, Ellipse, Rectangle
+from kivy.uix.image import Image
+from kivy.uix.button import Button
 
-from mission import MissionModel
+from mission import MissionModel, Entity
 
 class MissionView(FloatLayout):
+    def __init__(self, *args, **kwargs):
+        super(MissionView, self).__init__(*args, **kwargs)
+        self.mission_model = MissionModel()
+        # load settings
+        self.mission_model.fox_entity = Entity()
+        self.mission_model.fox_entity.position_x = 4
+        self.mission_model.fox_entity.position_y = 2
+
+        self.fox_icon = None
+
     def on_size(self, instance, value):
         # Clear the canvas.
         with self.canvas:
@@ -20,7 +32,34 @@ class MissionView(FloatLayout):
                 size=(self.window_width, self.bar_height)
             )
 
-        self.draw_grid(MissionModel())
+        self.draw_grid(self.mission_model)
+
+        # Draw the fox icon on top of the grid.
+        if self.mission_model.fox_entity:
+            # Figure out its final coordinates.
+            image_position = self.get_screen_coordinates_from_grid(
+                self.mission_model,
+                self.mission_model.fox_entity.position_x,
+                self.mission_model.fox_entity.position_y
+            )
+            # Figure out the size the image should be.
+            image_size = self.get_grid_cell_size(self.mission_model)
+            # If the image doesn't exist, create it
+            if not self.fox_icon:
+                new_image = Image(
+	            source = "f_icon.png",
+	            pos = image_position,
+                    size_hint_x = None,
+                    size_hint_y = None,
+                    size = image_size,
+                    allow_stretch = True
+                )
+                self.add_widget(new_image)
+                self.fox_icon = new_image
+            else:
+                # Otherwise, move the image to its destination
+                self.fox_icon.pos = image_position
+                self.fox_icon.size = image_size
 
     def on_release_return_to_title(self):
         # Return to the title screen.
@@ -67,6 +106,18 @@ class MissionView(FloatLayout):
                     pos=(x, y),
                     size=(self.window_width, line_thickness)
                 )
+
+    def get_grid_cell_size(self, mission_model):
+        # Returns the size of each cell on the grid.
+        width = self.window_width  / (mission_model.grid_width * 1.0)
+        height = self.bar_height  / (mission_model.grid_height * 1.0)
+        return (width, height)
+
+    def get_screen_coordinates_from_grid(self,mission_model,grid_x,grid_y):
+        # Converts the coordinates (grid_x, grid_y) to screen coordinates and returns them as a tuple.
+        screen_x = (grid_x * self.window_width)  / (mission_model.grid_width * 1.0)
+        screen_y = (grid_y * self.bar_height)  / (mission_model.grid_height * 1.0)
+        return (screen_x, screen_y)
 
 class TitleScreen(FloatLayout):
     def on_release_go_to_mission(self):
