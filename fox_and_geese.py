@@ -16,14 +16,36 @@ class MissionView(FloatLayout):
     def __init__(self, *args, **kwargs):
         super(MissionView, self).__init__(*args, **kwargs)
         self.mission_model = MissionModel()
-        # load settings
-        self.mission_model.fox_entity = Entity()
-        self.mission_model.fox_entity.position_x = 4
-        self.mission_model.fox_entity.position_y = 2
+        # load mission model settings; a controller should do this
+        self.mission_model.all_entities_by_id['fox2'] = Entity()
+        self.mission_model.all_entities_by_id['fox2'].position_x = 4
+        self.mission_model.all_entities_by_id['fox2'].position_y = 2
+        self.mission_model.all_entities_by_id['fox2'].resource_id = 'fox'
 
-        self.fox_icon = None
+        self.mission_model.all_entities_by_id['goose_01'] = Entity()
+        self.mission_model.all_entities_by_id['goose_01'].position_x = 1
+        self.mission_model.all_entities_by_id['goose_01'].position_y = 2
+        self.mission_model.all_entities_by_id['goose_01'].resource_id = 'goose'
+
+        self.mission_model.all_entities_by_id['goose_02'] = Entity()
+        self.mission_model.all_entities_by_id['goose_02'].position_x = 4
+        self.mission_model.all_entities_by_id['goose_02'].position_y = 0
+        self.mission_model.all_entities_by_id['goose_02'].resource_id = 'goose'
+
+        self.image_info_by_id = {}
+        self.image_info_by_id['fox'] = {
+            'resource': 'f_icon.png'
+        }
+        self.image_info_by_id['goose'] = {
+            'resource': 'g_icon.png'
+        }
+
+        self.sprite_info_by_id = {}
 
     def on_size(self, instance, value):
+        self.redraw()
+
+    def redraw(self):
         # Clear the canvas.
         with self.canvas:
             Color(self.background_color[0], self.background_color[1], self.background_color[2], mode='hsv')
@@ -34,20 +56,26 @@ class MissionView(FloatLayout):
 
         self.draw_grid(self.mission_model)
 
-        # Draw the fox icon on top of the grid.
-        if self.mission_model.fox_entity:
+        # Draw each entity onto the grid.
+        for entity_id in self.mission_model.all_entities_by_id:
+            self.draw_entity(entity_id)
+
+    def draw_entity(self, entity_id):
+        # Draw the entity's icon on top of the grid.
+        if self.mission_model.all_entities_by_id[entity_id]:
+            entity = self.mission_model.all_entities_by_id[entity_id]
             # Figure out its final coordinates.
             image_position = self.get_screen_coordinates_from_grid(
                 self.mission_model,
-                self.mission_model.fox_entity.position_x,
-                self.mission_model.fox_entity.position_y
+                entity.position_x,
+                entity.position_y
             )
             # Figure out the size the image should be.
             image_size = self.get_grid_cell_size(self.mission_model)
             # If the image doesn't exist, create it
-            if not self.fox_icon:
+            if not (entity_id in self.sprite_info_by_id and self.sprite_info_by_id[entity_id]):
                 new_image = Image(
-	            source = "f_icon.png",
+	            source = self.image_info_by_id[entity.resource_id]['resource'],
 	            pos = image_position,
                     size_hint_x = None,
                     size_hint_y = None,
@@ -55,11 +83,11 @@ class MissionView(FloatLayout):
                     allow_stretch = True
                 )
                 self.add_widget(new_image)
-                self.fox_icon = new_image
+                self.sprite_info_by_id[entity_id] = new_image
             else:
                 # Otherwise, move the image to its destination
-                self.fox_icon.pos = image_position
-                self.fox_icon.size = image_size
+                self.sprite_info_by_id[entity_id].pos = image_position
+                self.sprite_info_by_id[entity_id].size = image_size
 
     def on_release_return_to_title(self):
         # Return to the title screen.
