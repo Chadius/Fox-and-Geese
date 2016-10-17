@@ -30,13 +30,13 @@ During a map, you have up down left right buttons.
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
 * Development TODOs
-Add images for Fox and Geese
-
-** Mission Model
-width
-height
-fox_position - a tuple for coordinates. Down Left is (0,0)
-geese_positions - a tuple of tuples for the geese.
 ** Mission Controller
-Move Fox (direction)
-Move Goose (index, direction)
+Move Entity (id, direction)
+
+Add unit tests to move an Entity 1 space.
+- Test in an open spot
+- Test against a wall
+
+Test for collisions?
+- Let units collide, then report they have collided.
+- Return the entity ids and their locations.
