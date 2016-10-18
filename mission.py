@@ -52,13 +52,30 @@ class MissionModel:
             entity_to_move.pending_position_y = entity_to_move.position_y
             code_valid = True
 
+        # If you recieved a valid movement direction, make sure each pending direction is set.
+        if code_valid:
+            if entity_to_move.pending_position_x == None:
+                entity_to_move.pending_position_x = entity_to_move.position_x
+            if entity_to_move.pending_position_y == None:
+                entity_to_move.pending_position_y = entity_to_move.position_y
+
     def move_all_entities(self):
         # All Entities with a pending move are moved.
         for entity_id in self.all_entities_by_id:
             entity = self.all_entities_by_id[entity_id]
-            if entity.pending_position_x and entity.pending_position_y:
+            if entity.pending_position_x != None \
+                and entity.pending_position_y != None:
                 entity.position_x = entity.pending_position_x
                 entity.position_y = entity.pending_position_y
+            # Ensure the Entity is on the map.
+            if entity.position_x < 0:
+                entity.position_x = 0
+            if entity.position_y < 0:
+                entity.position_y = 0
+            if entity.position_x >= self.grid_width:
+                entity.position_x = self.grid_width-1
+            if entity.position_y >= self.grid_height:
+                entity.position_y = self.grid_height-1
             # Clear the pending position.
             entity.pending_position_x = None
             entity.pending_position_y = None

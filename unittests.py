@@ -17,7 +17,7 @@ class MissionControllerTest(unittest.TestCase):
         # Test unit can move into an open spot
         self.mission_model.try_to_move_entity(
             id='fox',
-            direction='U'
+            direction='D'
         )
 
         self.mission_model.try_to_move_entity(
@@ -50,7 +50,7 @@ class MissionControllerTest(unittest.TestCase):
         # Test units are at expected positions
         fox_entity = self.mission_model.all_entities_by_id['fox']
         self.assertEqual(fox_entity.position_x, 0)
-        self.assertEqual(fox_entity.position_y, 1)
+        self.assertEqual(fox_entity.position_y, 0)
 
         goose_entity = self.mission_model.all_entities_by_id['goose_000']
         self.assertEqual(goose_entity.position_x, 1)
@@ -60,7 +60,19 @@ class MissionControllerTest(unittest.TestCase):
         self.assertEqual(goose2_entity.position_x, 1)
         self.assertEqual(goose2_entity.position_y, 0)
 
-    # Test unit does not move off screen
+    def test_unit_stays_on_map(self):
+        # Test unit does not move off screen
+        self.mission_model.try_to_move_entity(
+            id='fox',
+            direction='DL'
+        )
+
+        self.mission_model.move_all_entities()
+
+        fox_entity = self.mission_model.all_entities_by_id['fox']
+        self.assertEqual(fox_entity.position_x, 0)
+        self.assertEqual(fox_entity.position_y, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
