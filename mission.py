@@ -19,6 +19,8 @@ class MissionModel:
         self.all_entities_by_id = {}
         self.all_entities_by_id['fox'] = None
 
+        self.collisions = []
+
     def try_to_move_entity(self, id, direction):
         # Set up a pending move for the given Entity.
         # Does not actually move all units until you call move_all_units()
@@ -79,3 +81,42 @@ class MissionModel:
             # Clear the pending position.
             entity.pending_position_x = None
             entity.pending_position_y = None
+
+    def find_collisions(self):
+        # Looks at all objects (most are Entities) to find any that are at the same location.
+        # This will add to this.collisions. Each collision adds a dictionary:
+        # 'colliding objects' : a tuple of colliding objects, usually an Entity
+        # 'x': x coordinate of the collision
+        # 'y': y coordinate of the collision
+
+        all_objects_by_x_y = {}
+
+        # Record each object's location in a dictionary
+        for entity_id in self.all_entities_by_id:
+            entity = self.all_entities_by_id[entity_id]
+            pos_x = entity.position_x
+            pos_y = entity.position_y
+
+            if not pos_x in all_objects_by_x_y:
+                all_objects_by_x_y[pos_x] = {}
+            if not pos_y in all_objects_by_x_y[pos_x]:
+                all_objects_by_x_y[pos_x][pos_y] = []
+            all_objects_by_x_y[pos_x][pos_y].append(entity)
+
+        # For each location
+        for pos_x in all_objects_by_x_y:
+            for pos_y in all_objects_by_x_y[pos_x]:
+                # If there are 2 or more items there
+                if len(all_objects_by_x_y[pos_x][pos_y]) >= 2:
+                    # Create a new collision
+                    new_collision = {
+                        'colliding objects':all_objects_by_x_y[pos_x][pos_y],
+                        'x':pos_x,
+                        'y':pos_y
+                    }
+                    # Add new collision to existing ones
+                    self.collisions.append(new_collision)
+
+    def clear_collisions(self):
+        # Clear the collision data.
+        del self.collisions[:]
