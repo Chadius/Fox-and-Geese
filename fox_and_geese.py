@@ -10,7 +10,8 @@ from kivy.graphics import Color, Ellipse, Rectangle
 from kivy.uix.image import Image
 from kivy.uix.button import Button
 
-from mission import MissionModel, Entity
+from mission import MissionModel
+from entity import Entity
 
 class MissionView(FloatLayout):
     def __init__(self, *args, **kwargs):

@@ -1,11 +1,12 @@
 import unittest
-from mission import MissionModel, Entity
+from mission import MissionModel
+from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 
 class MissionControllerTest(unittest.TestCase):
     def setUp(self):
         # Create a 3x2 map.
         self.mission_model = MissionModel(width=3, height=2)
-        # Put 2 entities on the map, near the corners.
+        # Put entities on the map, near the corners.
         fox_entity = Entity(position={'x':0, 'y':1})
         goose_entity = Entity(position={'x':2, 'y':0})
         goose2_entity = Entity(position={'x':1, 'y':0})
@@ -193,7 +194,210 @@ class MissionControllerTest(unittest.TestCase):
         # There should be no collision data
         self.assertEqual(self.mission_model.collisions, [])
 
-    # Test objects walking into the same wall, need to use last round's location
+
+class FoxGooseCollisionBehavior(unittest.TestCase):
+    def setUp(self):
+        # Create a 3x2 map.
+        self.mission_model = MissionModel(width=3, height=2)
+
+        # Create a fox entity, and put it at the center.
+        self.fox_entity = Entity(position={'x':1, 'y':0}, entity_type='fox')
+        self.fox_entity.collision_behavior = FoxCollisionResolver(self.fox_entity)
+
+        # Create 3 geese. They are all within 1 space of the Fox.
+        self.goose_0 = Entity(position={'x':0, 'y':0}, entity_type='goose')
+        self.goose_0.collision_behavior = GooseCollisionResolver(self.goose_0)
+
+        self.goose_1 = Entity(position={'x':2, 'y':0}, entity_type='goose')
+        self.goose_1.collision_behavior = GooseCollisionResolver(self.goose_1)
+
+        self.goose_2 = Entity(position={'x':1, 'y':1}, entity_type='goose')
+        self.goose_2.collision_behavior = GooseCollisionResolver(self.goose_2)
+
+        self.mission_model.all_entities_by_id['fox'] = self.fox_entity
+        self.mission_model.all_entities_by_id['goose_000'] = self.goose_0
+        self.mission_model.all_entities_by_id['goose_001'] = self.goose_1
+        self.mission_model.all_entities_by_id['goose_002'] = self.goose_2
+
+    def test_one_goose_and_fox_makes_one_dead_goose(self):
+        # If the fox bumps into 1 goose, mark the goose as dead
+
+        # Move 1 goose into the fox.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='R'
+        )
+        self.mission_model.move_all_entities()
+
+        # Confirm the goose is not dead
+        self.assertEqual(self.goose_0.is_dead, False)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # The goose should be dead
+        self.assertEqual(self.goose_0.is_dead, True)
+
+        # The fox should NOT be dead
+        self.assertEqual(self.fox_entity.is_dead, False)
+
+        # Other geese should NOT be dead
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, False)
+
+    def test_two_geese_and_fox_makes_two_dead_geese(self):
+        # If the fox bumps into 2 geese, mark the geese as dead
+
+        # Move 2 geese into the fox.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='R'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_001',
+            direction='L'
+        )
+        self.mission_model.move_all_entities()
+
+        # Confirm the geese are not dead
+        self.assertEqual(self.goose_0.is_dead, False)
+        self.assertEqual(self.goose_1.is_dead, False)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # The geese should be dead
+        self.assertEqual(self.goose_0.is_dead, True)
+        self.assertEqual(self.goose_1.is_dead, True)
+
+        # The fox should NOT be dead
+        self.assertEqual(self.fox_entity.is_dead, False)
+
+        # Other geese should NOT be dead
+        self.assertEqual(self.goose_2.is_dead, False)
+
+    def test_three_geese_and_fox_makes_one_dead_fox(self):
+        # If three geese surround the fox, the fox should be dead.
+
+        # Move 3 geese into the fox.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='R'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_001',
+            direction='L'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_002',
+            direction='D'
+        )
+        self.mission_model.move_all_entities()
+
+        # Confirm the geese are not dead
+        self.assertEqual(self.goose_0.is_dead, False)
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, False)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # The geese should NOT be dead
+        self.assertEqual(self.goose_0.is_dead, False)
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, False)
+
+        # The fox should be dead
+        self.assertEqual(self.fox_entity.is_dead, True)
+
+    def not_ready_test_two_geese_makes_one_move_ahead(self):
+        # If two geese bump into each other, one of them moves ahead while the other one retreats.
+
+        # Two geese move into the same space.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='U'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_002',
+            direction='L'
+        )
+
+        self.mission_model.move_all_entities()
+
+        # Confirm the geese are at the same position
+        self.assertEqual(self.goose_0.position_x, 0)
+        self.assertEqual(self.goose_0.position_y, 1)
+
+        self.assertEqual(self.goose_2.position_x, 0)
+        self.assertEqual(self.goose_2.position_y, 1)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # One of the geese should have stayed and the other should have retreated
+        goose_0_retreated = (self.goose_0.position_x == 0 and self.goose_0.position_y == 0)
+        goose_2_retreated = (self.goose_2.position_x == 1 and self.goose_2.position_y == 1)
+
+        goose_0_moved = (self.goose_2.position_x == 0 and self.goose_2.position_y == 1)
+        goose_2_moved = (self.goose_2.position_x == 0 and self.goose_2.position_y == 1)
+
+        goose_position_string = "Exactly one of the geese should be at (0,1). Actual positions: goose_0: (%d,%d) goose_2: (%d,%d)" % (
+            self.goose_0.position_x,
+            self.goose_0.position_y,
+            self.goose_2.position_x,
+            self.goose_2.position_y,
+        )
+
+        self.assertTrue( ((goose_0_retreated and goose_2_moved) or (goose_0_moved and goose_2_retreated)), goose_position_string)
+
+    def not_ready_test_two_geese_one_waiting_makes_one_retreat(self):
+        # One goose stands still while the other walks into it. The walking one should retreat.
+
+        # Two geese move into the same space.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='W'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_002',
+            direction='DL'
+        )
+
+        self.mission_model.move_all_entities()
+
+        # Confirm the geese are at the same position
+        self.assertEqual(self.goose_0.position_x, 0)
+        self.assertEqual(self.goose_0.position_y, 0)
+
+        self.assertEqual(self.goose_2.position_x, 0)
+        self.assertEqual(self.goose_2.position_y, 0)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # Goose 0 should not have moved
+        self.assertEqual(self.goose_0.position_x, 0)
+        self.assertEqual(self.goose_0.position_y, 0)
+
+        # Goose 2 should have returned to its original position
+        self.assertEqual(self.goose_2.position_x, 1)
+        self.assertEqual(self.goose_2.position_y, 1)
 
 if __name__ == '__main__':
     unittest.main()

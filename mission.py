@@ -1,13 +1,3 @@
-class Entity:
-    def __init__(self, position={'x':None, 'y':None}):
-        self.position_x = position['x']
-        self.position_y = position['y']
-
-        self.pending_position_x = None
-        self.pending_position_y = None
-
-        self.resource_id = None
-
 class MissionModel:
     # Information needed to track the status of a mission.
     def __init__(self, width=5, height=2):
@@ -120,3 +110,27 @@ class MissionModel:
     def clear_collisions(self):
         # Clear the collision data.
         del self.collisions[:]
+
+    def resolve_collisions(self):
+        # Based on self.collisions, each object that collided is asked to interact with the objects it collided with.
+
+        collision_resolutions = {}
+        # For each collision,
+        for collision_info in self.collisions:
+            # For each entity in the collision,
+            for entity in collision_info['colliding objects']:
+                # Ask the entity resolve its collision and collect the results
+                if not entity in collision_info:
+                    collision_resolutions[entity] = []
+                results = entity.resolve_collisions(collision_info)
+                collision_resolutions[entity] += (results)
+
+        # For each entity with a resolution
+        for entity in collision_resolutions:
+            for resolution in collision_resolutions[entity]:
+                if not resolution:
+                    continue
+                # If the entity wants to die, mark it as dead
+                if resolution['action'] == 'kill self':
+                    entity.is_dead = True
+
