@@ -6,6 +6,8 @@ class Entity:
         self.pending_position_x = None
         self.pending_position_y = None
 
+        self.position_history = []
+
         self.is_dead = False
 
         self.resource_id = None
@@ -72,24 +74,34 @@ class GooseCollisionResolver(CollisionResolver):
 
         resolutions = []
         collided_with_fox = False
-        goose_count = 0
+        goose_collisions = []
+
         # For each entity
         for colliding_entity in colliding_entities:
             # skip if it's yourself
             if colliding_entity == self.entity:
-                goose_count += 1
+                goose_collisions.append(colliding_entity)
                 continue
 
             # count the number of geese
             if colliding_entity.entity_type == 'goose':
-                goose_count += 1
+                goose_collisions.append(colliding_entity)
 
             # see if you bumped into a fox
             if colliding_entity.entity_type == 'fox':
                 collided_with_fox = True
 
         # If there is a fox and less than 3 geese, this goose should die.
-        if collided_with_fox and goose_count < 3:
-                resolutions.append({'action':'kill self'})
+        if collided_with_fox and len(goose_collisions) < 3:
+            resolutions.append({'action':'kill self'})
+
+        # If there are other geese, ask the collider to let one goose move ahead.
+        if len(goose_collisions) > 0:
+            resolutions.append({
+                'action' : 'retreat',
+                'retreating objects' : goose_collisions,
+                'x' : collision_x,
+                'y' : collision_y,
+            })
         return resolutions
 

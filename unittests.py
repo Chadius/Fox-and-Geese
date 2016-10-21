@@ -1,6 +1,7 @@
 import unittest
 from mission import MissionModel
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
+from mock import patch
 
 class MissionControllerTest(unittest.TestCase):
     def setUp(self):
@@ -319,52 +320,92 @@ class FoxGooseCollisionBehavior(unittest.TestCase):
         # The fox should be dead
         self.assertEqual(self.fox_entity.is_dead, True)
 
-    def not_ready_test_two_geese_makes_one_move_ahead(self):
+    @patch.object(MissionModel, '_get_random_entity')
+    def test_two_geese_makes_one_move_ahead(self, _get_random_entity):
         # If two geese bump into each other, one of them moves ahead while the other one retreats.
 
-        # Two geese move into the same space.
-        self.mission_model.try_to_move_entity(
-            id='goose_000',
-            direction='U'
-        )
-        self.mission_model.try_to_move_entity(
-            id='goose_002',
-            direction='L'
-        )
+        # _get_random_entity chooses an index at random. For the unit test we'll stub that out so it always chooses a fixed index.
+        expected_results_by_random_index = {
+            0: {
+                'goose_0': {
+                    'comment': 'advanced',
+                    'x': 0,
+                    'y': 1
+                },
+                'goose_2': {
+                    'comment': 'retreated',
+                    'x': 1,
+                    'y': 1
+                },
+                'expected string' : 'goose_0 should be at (0,1) and goose_2 should be at (1,1). Actual positions:'
+            },
+            1: {
+                'goose_0': {
+                    'comment': 'retreated',
+                    'x': 0,
+                    'y': 0
+                },
+                'goose_2': {
+                    'comment': 'advanced',
+                    'x': 0,
+                    'y': 1
+                },
+                'expected string' : 'goose_0 should be at (0,0) and goose_2 should be at (0,1). Actual positions:'
+            }
+        }
 
-        self.mission_model.move_all_entities()
+        for random_index in expected_results_by_random_index:
+            # Reset the board.
+            self.setUp()
 
-        # Confirm the geese are at the same position
-        self.assertEqual(self.goose_0.position_x, 0)
-        self.assertEqual(self.goose_0.position_y, 1)
+            # Mock the _get_random_entity function so it always chooses a set index.
+            _get_random_entity.side_effect = lambda entities: entities[random_index]
 
-        self.assertEqual(self.goose_2.position_x, 0)
-        self.assertEqual(self.goose_2.position_y, 1)
+            # Two geese move into the same space.
+            self.mission_model.try_to_move_entity(
+                id='goose_000',
+                direction='U'
+            )
+            self.mission_model.try_to_move_entity(
+                id='goose_002',
+                direction='L'
+            )
 
-        # Check for collisions
-        self.mission_model.find_collisions()
+            self.mission_model.move_all_entities()
 
-        # Ask Mission Controller for entities to act on the collisions
-        self.mission_model.resolve_collisions()
+            # Confirm the geese are at the same position
+            self.assertEqual(self.goose_0.position_x, 0)
+            self.assertEqual(self.goose_0.position_y, 1)
 
-        # One of the geese should have stayed and the other should have retreated
-        goose_0_retreated = (self.goose_0.position_x == 0 and self.goose_0.position_y == 0)
-        goose_2_retreated = (self.goose_2.position_x == 1 and self.goose_2.position_y == 1)
+            self.assertEqual(self.goose_2.position_x, 0)
+            self.assertEqual(self.goose_2.position_y, 1)
 
-        goose_0_moved = (self.goose_2.position_x == 0 and self.goose_2.position_y == 1)
-        goose_2_moved = (self.goose_2.position_x == 0 and self.goose_2.position_y == 1)
+            # Check for collisions
+            self.mission_model.find_collisions()
 
-        goose_position_string = "Exactly one of the geese should be at (0,1). Actual positions: goose_0: (%d,%d) goose_2: (%d,%d)" % (
-            self.goose_0.position_x,
-            self.goose_0.position_y,
-            self.goose_2.position_x,
-            self.goose_2.position_y,
-        )
+            # Ask Mission Controller for entities to act on the collisions
+            self.mission_model.resolve_collisions()
 
-        self.assertTrue( ((goose_0_retreated and goose_2_moved) or (goose_0_moved and goose_2_retreated)), goose_position_string)
+            # One of the geese should have advanced to the new position and the other should have retreated
+            goose_assertion_string = expected_results_by_random_index[random_index]['expected string'] + "goose_0: (%d,%d) goose_2: (%d,%d)" % (
+                self.goose_0.position_x,
+                self.goose_0.position_y,
+                self.goose_2.position_x,
+                self.goose_2.position_y,
+            )
 
-    def not_ready_test_two_geese_one_waiting_makes_one_retreat(self):
+            self.assertEqual(self.goose_0.position_x, expected_results_by_random_index[random_index]['goose_0']['x'], goose_assertion_string)
+            self.assertEqual(self.goose_0.position_y, expected_results_by_random_index[random_index]['goose_0']['y'], goose_assertion_string)
+
+            self.assertEqual(self.goose_2.position_x, expected_results_by_random_index[random_index]['goose_2']['x'], goose_assertion_string)
+            self.assertEqual(self.goose_2.position_y, expected_results_by_random_index[random_index]['goose_2']['y'], goose_assertion_string)
+
+    @patch.object(MissionModel, '_get_random_entity')
+    def test_two_geese_one_waiting_makes_one_retreat(self, _get_random_entity):
         # One goose stands still while the other walks into it. The walking one should retreat.
+
+        # Mock the _get_random_entity function so it always chooses the last Entity. The first Entity should be the one that advances.
+        _get_random_entity.side_effect = lambda entities: entities[-1]
 
         # Two geese move into the same space.
         self.mission_model.try_to_move_entity(

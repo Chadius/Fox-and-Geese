@@ -1,3 +1,5 @@
+import random
+
 class MissionModel:
     # Information needed to track the status of a mission.
     def __init__(self, width=5, height=2):
@@ -55,10 +57,16 @@ class MissionModel:
         # All Entities with a pending move are moved.
         for entity_id in self.all_entities_by_id:
             entity = self.all_entities_by_id[entity_id]
+
+            # Push the previous position to the history
+            entity.position_history.append({'x': entity.position_x, 'y': entity.position_y})
+
+            # If a pending position was set, move the Entity to the new location.
             if entity.pending_position_x != None \
                 and entity.pending_position_y != None:
                 entity.position_x = entity.pending_position_x
                 entity.position_y = entity.pending_position_y
+
             # Ensure the Entity is on the map.
             if entity.position_x < 0:
                 entity.position_x = 0
@@ -68,6 +76,7 @@ class MissionModel:
                 entity.position_x = self.grid_width-1
             if entity.position_y >= self.grid_height:
                 entity.position_y = self.grid_height-1
+
             # Clear the pending position.
             entity.pending_position_x = None
             entity.pending_position_y = None
@@ -126,6 +135,7 @@ class MissionModel:
                 collision_resolutions[entity] += (results)
 
         # For each entity with a resolution
+        retreat_collisions = {}
         for entity in collision_resolutions:
             for resolution in collision_resolutions[entity]:
                 if not resolution:
@@ -133,4 +143,51 @@ class MissionModel:
                 # If the entity wants to die, mark it as dead
                 if resolution['action'] == 'kill self':
                     entity.is_dead = True
+
+                # If the entity wants to retreat, we need to track the collision. Just store one set for each collision.
+                if resolution['action'] == 'retreat':
+                    x = resolution['x']
+                    y = resolution['y']
+                    if not x in retreat_collisions:
+                        retreat_collisions[x] = {}
+                    if not y in retreat_collisions[x]:
+                        retreat_collisions[x][y] = {'x':x , 'y':y, 'entities': resolution['retreating objects']}
+
+        # Some results say units need to retreat.
+        # For each result resolution
+        for x in retreat_collisions:
+            for y in retreat_collisions[x]:
+                # One Entity should NOT retreat.
+                advancing_entity = self._get_retreating_entity_that_should_stay(retreat_collisions[x][y]['entities'])
+
+                # For all units in the resolution
+                for entity in retreat_collisions[x][y]['entities']:
+                    # Skip if it's not the Entity that should retreat
+                    if entity == advancing_entity:
+                        continue
+
+                    # The Entity should move back one space.
+                    entity.position_x = entity.position_history[-1]['x']
+                    entity.position_y = entity.position_history[-1]['y']
+
+    def _get_retreating_entity_that_should_stay(self, retreating_entities):
+        # Given information on Entities that want to retreat, return the Entity that should NOT retreat.
+        # retreating_entities is a list of Entities.
+
+        for entity in retreating_entities:
+            # If the entity was waiting last turn, then something walked into it. It should advance.
+            if (
+                    (len(entity.position_history) == 0)
+                    or (
+                        entity.position_history[-1]['x'] == entity.position_x
+                        and entity.position_history[-1]['y'] == entity.position_y
+                    )
+            ):
+                return entity
+
+        return self._get_random_entity(retreating_entities)
+
+    def _get_random_entity(self, entities):
+        # Just choose a random entity
+        return random.choice(entities)
 
