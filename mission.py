@@ -9,9 +9,12 @@ class MissionModel:
         self.fox_entity = None
 
         self.all_entities_by_id = {}
-        self.all_entities_by_id['fox'] = None
 
         self.collisions = []
+        """Stores all collisions calculated."""
+
+        self.all_ai_by_id = {}
+        """All of the entity AI. Note these ids are different from the entity_id."""
 
     def try_to_move_entity(self, id, direction):
         # Set up a pending move for the given Entity.
@@ -191,3 +194,14 @@ class MissionModel:
         # Just choose a random entity
         return random.choice(entities)
 
+    def ask_all_ai_for_next_move(self):
+        """Ask for all ai controllers to process and figure out their next moves.
+        """
+        for ai_controller in self.all_ai_by_id.values():
+            ai_controller.determine_next_moves()
+
+    def clear_all_ai_for_moves(self):
+        """Clear all AI moves.
+        """
+        for ai_controller in self.all_ai_by_id.values():
+            ai_controller.clear_all_ai_moves()

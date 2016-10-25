@@ -1,6 +1,7 @@
 import unittest
 from mission import MissionModel
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
+import ai_controllers
 from mock import patch
 
 class MissionControllerTest(unittest.TestCase):
@@ -439,6 +440,128 @@ class FoxGooseCollisionBehavior(unittest.TestCase):
         # Goose 2 should have returned to its original position
         self.assertEqual(self.goose_2.position_x, 1)
         self.assertEqual(self.goose_2.position_y, 1)
+
+class GroupAITests(unittest.TestCase):
+    """Tests the Goose AI to ensure it behaves correctly.
+    """
+
+    def setUp(self):
+        # Make a map.
+        self.mission_model = MissionModel(width=5, height=2)
+
+        # Add a Fox.
+        self.fox_entity = Entity(position={'x':2, 'y':0}, entity_type='fox')
+
+        # Add some Geese.
+        self.goose_0 = Entity(position={'x':0, 'y':0}, entity_type='goose')
+
+        self.goose_1 = Entity(position={'x':4, 'y':1}, entity_type='goose')
+
+        self.goose_2 = Entity(position={'x':3, 'y':0}, entity_type='goose')
+
+        self.mission_model.all_entities_by_id['fox'] = self.fox_entity
+        self.mission_model.all_entities_by_id['goose_000'] = self.goose_0
+        self.mission_model.all_entities_by_id['goose_001'] = self.goose_1
+        self.mission_model.all_entities_by_id['goose_002'] = self.goose_2
+
+        # Add AI for the Fox.
+        self.mission_model.all_ai_by_id['fox'] = ai_controllers.AlwaysWait(self.mission_model, 'fox')
+
+        # Add AI for the Geese so they work together as a unit.
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000', 'goose_001', 'goose_002'))
+
+    def test_one_goose_moves_toward_fox(self):
+        """Add one goose and one fox.
+        Ask the AI to process.
+        The AI should tell the goose to approach the fox.
+        """
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000'))
+        self.mission_model.ask_all_ai_for_next_move()
+        next_moves = self.mission_model.all_ai_by_id['goose'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'goose_000':'R'
+        })
+
+    def test_clear_ai_instructions(self):
+        """Ask the AI to determine the next move, then clear the AI.
+        The AI should have no instructions and be ready to go.
+        """
+        # Assert it has no instructions ready
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {})
+
+        self.mission_model.ask_all_ai_for_next_move()
+
+        # Assert that it wants the fox to wait
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'fox':'W'
+        })
+
+        # Clear the instructions and assert it's clear.
+        self.mission_model.clear_all_ai_for_moves()
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {})
+
+    def test_three_goose_moves_toward_fox(self):
+        """Add three goose and one fox.
+        Ask the AI to process.
+        The AI should tell all of the geese to approach the fox.
+        """
+        self.mission_model.ask_all_ai_for_next_move()
+        next_moves = self.mission_model.all_ai_by_id['goose'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'goose_000':'R',
+            'goose_001':'DL',
+            'goose_002':'L'
+        })
+
+    def test_replay_moves_ai(self):
+        """The AI simply replays the moves given to it.
+        Test that it moves correctly.
+        """
+        self.mission_model.all_ai_by_id['fox'] = ai_controllers.ReplayInstructions(self.mission_model, 'fox')
+        self.mission_model.all_ai_by_id['fox'].add_instructions(["U"])
+        self.mission_model.ask_all_ai_for_next_move()
+
+        # Assert it wants to go up
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'fox':'U'
+        })
+        self.mission_model.clear_all_ai_for_moves()
+
+        # Add another 2 instructions and assert it moves that way.
+        self.mission_model.all_ai_by_id['fox'].add_instructions(["UL", "W"])
+        self.mission_model.ask_all_ai_for_next_move()
+
+        # Assert it wants to go up
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'fox':'UL'
+        })
+        self.mission_model.clear_all_ai_for_moves()
+
+        self.mission_model.ask_all_ai_for_next_move()
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'fox':'W'
+        })
+        self.mission_model.clear_all_ai_for_moves()
+
+    def test_manual_move_ai(self):
+        """The Fox will move in the direction given.
+        Test that it moves correctly.
+        """
+        self.mission_model.all_ai_by_id['fox'] = ai_controllers.ManualInstructions(self.mission_model, 'fox')
+        self.mission_model.all_ai_by_id['fox'].add_instruction("DR")
+        self.mission_model.ask_all_ai_for_next_move()
+
+        # Assert it wants to go up
+        next_moves = self.mission_model.all_ai_by_id['fox'].get_next_moves()
+        self.assertEqual(next_moves, {
+            'fox':'DR'
+        })
 
 if __name__ == '__main__':
     unittest.main()

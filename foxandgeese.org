@@ -25,18 +25,11 @@ Game Screen has a map. It has a Title Screen button.
 After you win or lose, only the Title Screen button is available.
 During a map, you have up down left right buttons.
 * Timetable
-1 month: Proof of Concept.
+1 month: Proof of Concept. [2016-11-05 Sat]
 3 months: Builds on multiple platforms (Alpha?)
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
 * Development TODOs
 ** Mission Controller
-Move Entity (id, direction)
-
 Add unit tests to move an Entity 1 space.
-- Test in an open spot
 - Test against a wall
-
-Test for collisions?
-- Let units collide, then report they have collided.
-- Return the entity ids and their locations.
