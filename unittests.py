@@ -1,10 +1,10 @@
 import unittest
-from mission import MissionModel
+from mission import MissionModel, MissionController
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 import ai_controllers
 from mock import patch
 
-class MissionControllerTest(unittest.TestCase):
+class EntityMovementTest(unittest.TestCase):
     def setUp(self):
         # Create a 3x2 map.
         self.mission_model = MissionModel(width=3, height=2)
@@ -562,6 +562,178 @@ class GroupAITests(unittest.TestCase):
         self.assertEqual(next_moves, {
             'fox':'DR'
         })
+
+class MissionStatusTest(unittest.TestCase):
+    """These tests will decide if the player wins or loses.
+    """
+    def setUp(self):
+        """Create a map.
+        """
+        # Create a 3x2 map.
+        self.mission_model = MissionModel(width=3, height=2)
+
+    def test_no_fox_mission_incomplete(self):
+        """Without a Fox, the mission can never complete.
+        """
+        self.assertEqual(self.mission_model.get_mission_status(), "not finished")
+
+    def test_no_geese_mission_incomplete(self):
+        """Without a Goose, the mission can never complete.
+        """
+
+        # Add a Fox
+        fox_entity = Entity(position={'x':0, 'y':1}, entity_type='fox')
+        self.mission_model.all_entities_by_id['fox'] = fox_entity
+
+        self.assertEqual(self.mission_model.get_mission_status(), "not finished")
+
+    def test_all_geese_dead_mission_success(self):
+        """If there is a Fox and all Geese are dead, the mission is successful and you win.
+        """
+        # Add a Fox
+        fox_entity = Entity(position={'x':0, 'y':1}, entity_type='fox')
+        self.mission_model.all_entities_by_id['fox'] = fox_entity
+
+        # Add a Goose
+        goose0_entity = Entity(position={'x':2, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_000'] = goose0_entity
+        # Mark the Goose as dead
+        goose0_entity.is_dead = True
+
+        # Mission Status should indicate the player won
+        self.assertEqual(self.mission_model.get_mission_status(), "player win")
+
+    def test_fox_dead_mission_failure(self):
+        """If there are Geese and the Fox is dead, the mission is a failure and you lose.
+        """
+        # Add a Fox
+        fox_entity = Entity(position={'x':0, 'y':1}, entity_type='fox')
+        self.mission_model.all_entities_by_id['fox'] = fox_entity
+        # Mark the Fox as dead
+        fox_entity.is_dead = True
+
+        # Add two Geese. Mark one as dead.
+        goose0_entity = Entity(position={'x':2, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_000'] = goose0_entity
+
+        goose1_entity = Entity(position={'x':1, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_001'] = goose1_entity
+        goose1_entity.is_dead = True
+        # Mission Status should indicate the player lost
+        self.assertEqual(self.mission_model.get_mission_status(), "player lose")
+
+    def test_all_dead_mission_failure(self):
+        """If the Geese and Fox are dead, the mission is a failure and you lose.
+        """
+        # Add a Fox
+        fox_entity = Entity(position={'x':0, 'y':1}, entity_type='fox')
+        self.mission_model.all_entities_by_id['fox'] = fox_entity
+        # Mark the Fox as dead
+        fox_entity.is_dead = True
+
+        # Add a Goose
+        # Mark the Goose as dead
+        goose0_entity = Entity(position={'x':2, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_000'] = goose0_entity
+        goose0_entity.is_dead = True
+
+        goose1_entity = Entity(position={'x':1, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_001'] = goose1_entity
+        goose1_entity.is_dead = True
+
+        # Mission Status should indicate the player lost
+        self.assertEqual(self.mission_model.get_mission_status(), "player lose")
+
+    def test_in_progress(self):
+        """The mission is still in progress if the Fox and some Geese are alive.
+        """
+        # Add a Fox
+        fox_entity = Entity(position={'x':0, 'y':1}, entity_type='fox')
+        self.mission_model.all_entities_by_id['fox'] = fox_entity
+
+        # Add two Geese. Mark one as dead.
+        goose0_entity = Entity(position={'x':2, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_000'] = goose0_entity
+
+        goose1_entity = Entity(position={'x':1, 'y':0}, entity_type='goose')
+        self.mission_model.all_entities_by_id['goose_001'] = goose1_entity
+        goose1_entity.is_dead = True
+        # Mission Status should indicate the player lost
+        self.assertEqual(self.mission_model.get_mission_status(), "not finished")
+
+class MissionControllerStateTest(unittest.TestCase):
+    """Tests that the mission control responds to correct stimuli.
+    """
+
+    def setUp(self):
+        # Make a map.
+        self.mission_model = MissionModel(width=5, height=2)
+
+        # Add a Fox.
+        self.fox_entity = Entity(position={'x':2, 'y':0}, entity_type='fox')
+        self.fox_entity.collision_behavior = FoxCollisionResolver(self.fox_entity)
+        self.mission_model.all_entities_by_id['fox'] = self.fox_entity
+        self.mission_model.all_ai_by_id['fox'] = ai_controllers.ManualInstructions(self.mission_model, 'fox')
+        # Add some Geese.
+        self.goose_0 = Entity(position={'x':0, 'y':0}, entity_type='goose')
+        self.goose_0.collision_behavior = GooseCollisionResolver(self.goose_0)
+        self.mission_model.all_entities_by_id['goose_000'] = self.goose_0
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000'))
+
+        self.mission_controller = MissionController(mission_model = self.mission_model)
+
+    def test_not_initialized(self):
+        """Without a map, the mission contoller should mention it is not ready yet.
+        """
+        no_map_mission_controller = MissionController()
+        state = no_map_mission_controller.get_status()
+        self.assertFalse(state["map initialized"])
+
+    def test_ready_for_player_input(self):
+        """See if the mission controller is ready for player input.
+        """
+        state = self.mission_controller.get_status()
+        self.assertTrue(state["map initialized"])
+
+    def test_see_fox_movement(self):
+        """After passing player input and moving, the mission controller should show the results of the fox's move.
+        """
+        self.mission_controller.player_input('w')
+        state = self.mission_controller.get_status()
+        self.assertEqual(state["player input"], "w")
+        self.assertTrue(state["fox moved"])
+
+    def test_other_entity_moves(self):
+        """After the fox has finished moving, tell the mission controller you're ready. The other entities should move.
+        """
+        self.mission_controller.player_input('L')
+        self.mission_controller.move_ai_entities()
+
+        state = self.mission_controller.get_status()
+        self.assertEqual(
+            state["other entities moves"],
+            {
+                'fox': {
+                    'x':1,
+                    'y':0,
+                    'is dead': False
+                },
+                'goose_000': {
+                    'x':1,
+                    'y':0,
+                    'is dead': True
+                }
+            }
+        )
+
+    def test_check_mission_complete(self):
+        """After killing the geese, did the mission complete?
+        """
+        self.mission_controller.player_input('l')
+        self.mission_controller.move_ai_entities()
+
+        state = self.mission_controller.get_status()
+        self.assertEqual(state["mission complete"], "player win")
 
 if __name__ == '__main__':
     unittest.main()

@@ -33,3 +33,28 @@ During a map, you have up down left right buttons.
 ** Mission Controller
 Add unit tests to move an Entity 1 space.
 - Test against a wall
+
+*** MissionView
+
+Needs to know the mission model so it knows the size of the map.
+Needs to know where ot get resources to build sprites.
+Needs to track the sprites.
+
+Needs to be aware of updates.
+
+Has to know when to say
+MISSION START
+MISSION COMPLETE
+FAILURE
+
+Has to know when to pass player input to the mission controller
+Has to know when to ask the other entities to move
+Has to animate the sprites moving around
+Has to animate the sprites dying
+
+Build a variable that shows what the view is waiting for.
+Mission Controller to be initialized
+Mission Start to finish displaying
+Player Input
+Finish Animating This Round's Results
+Show Mission Complete message
