@@ -334,3 +334,193 @@ class MissionController():
 
         # Check the mission status.
         self.mission_complete_status = self.mission_model.get_mission_status()
+
+    def reset_for_new_round(self):
+        """Reset the status at the end of the round.
+        """
+        self.fox_moved = False
+        self.other_entity_move_results = {}
+        self.player_desired_direction = None
+
+class MissionView:
+    """Visual representation of the mission.
+    """
+    def __init__(self):
+        self.mission_controller = None
+
+        # mission start has 3 statuses: "not started", "in progress" or "complete".
+        self.mission_start_status = "not started"
+
+        # Track the player's last input.
+        self.player_input = None
+
+        # Other entity's moves.
+        self.other_entity_move_results = None
+
+        # Sense if othe runits have moved.
+        self.finished_moving_entities = False
+
+        # Track the state of the mission complete message. It should have 3 states: "not started", "in progress" or "complete".
+        self.mission_complete_display_progress = "not started"
+
+    def update(self):
+        """This function will be called periodically to update the state or wait for animation to complete.
+        """
+        # If the mission controller didn't start, there is nothing to update.
+        if not self.mission_controller:
+            return
+
+        # Get the mission view status
+        status = self.get_status()
+
+        # If the mission start hasn't happened yet, show it.
+        if self.mission_start_status in ["not started", "in progress"]:
+            self.draw_mission_start()
+            return
+
+        # If the player passed input, move the entities.
+        if self.player_input != None and not self.other_entity_move_results:
+            # Move all of the AI entities
+            self.mission_controller.move_ai_entities()
+            # Record the other entity moves
+            mission_controller_status = self.mission_controller.get_status()
+            self.other_entity_move_results = mission_controller_status["other entities moves"]
+            return
+
+        # If we know how the entities want to move this turn but we haven't moved them yet, move them now.
+        if self.other_entity_move_results and not self.finished_moving_entities:
+            self.move_entities()
+            return
+
+        # If the entities have finished moving, see if the mission is complete.
+        if self.finished_moving_entities \
+           and status["mission complete message id"] in ["win", "lose"] \
+           and self.mission_complete_display_progress in ["not started", "in progress"]:
+            self.animate_mission_complete()
+            return
+
+    def get_status(self):
+        """Returns a dictionary showing the status of this mission.
+        """
+
+        # Determine if the mission controller is ready.
+        if not self.mission_controller:
+            return {
+                "mission controller initialized" : False
+            }
+
+        mission_controller_status = self.mission_controller.get_status()
+
+        # mission start has 3 statuses: not started, in progress or complete.
+        showing_mission_start = None
+        finished_showing_mission_start = None
+
+        if self.mission_start_status == "not started":
+            showing_mission_start = False
+            finished_showing_mission_start = False
+        elif self.mission_start_status == "in progress":
+            showing_mission_start = True
+            finished_showing_mission_start = False
+        else:
+            showing_mission_start = False
+            finished_showing_mission_start = True
+
+        # If the mission has finished showing the start screen, see if the player has passed input in.
+        waiting_for_player_input = (
+            self.mission_start_status == "complete"
+            and self.player_input == None
+        )
+
+        # If you're not waiting for the player's moves, then you know what the entities are doing.
+        entity_moves = self.other_entity_move_results
+
+        # If the mission is completed, note this.
+        mission_complete_message_id = None
+        controller_state = self.mission_controller.get_status()
+        if controller_state["mission complete"] in ["player win", "player lose"]:
+            if controller_state["mission complete"] == "player win":
+                mission_complete_message_id = "win"
+            else:
+                mission_complete_message_id = "lose"
+
+        showing_mission_complete_display = None
+        finished_showing_mission_complete_display = None
+
+        if self.mission_complete_display_progress == "not started":
+            showing_mission_complete_display = False
+            finished_showing_mission_complete_display = False
+        elif self.mission_complete_display_progress == "in progress":
+            showing_mission_complete_display = True
+            finished_showing_mission_complete_display = False
+        else:
+            showing_mission_complete_display = False
+            finished_showing_mission_complete_display = True
+
+        return {
+            "mission controller initialized" : True,
+            "showing mission start" : showing_mission_start,
+            "finished showing mission start" : finished_showing_mission_start,
+            "waiting for player input" : waiting_for_player_input,
+            "entity moves" : entity_moves,
+            "entities have moved" : self.finished_moving_entities,
+            "showing mission complete message" : showing_mission_complete_display,
+            "finished showing mission complete message" : finished_showing_mission_complete_display,
+            "mission complete message id": mission_complete_message_id,
+        }
+
+    def apply_player_input(self, player_input):
+        """If the mission is accepting player input, it will be passed to the mission controller.
+        """
+        # If we're waiting for player input, accept it.
+        status = self.get_status()
+
+        if status["waiting for player input"]:
+            self.player_input = player_input
+            # Pass the player input to the controller.
+            self.mission_controller.player_input(player_input)
+
+    def draw_mission_start(self):
+        """Draw the mission start banner. Subclasses should implement this function.
+        """
+        # If it hasn't started, start it now
+        if self.mission_start_status == "not started":
+            self.mission_start_status = "in progress"
+            return
+
+        # If it's in progress, declare it complete
+        if self.mission_start_status == "in progress":
+            self.mission_start_status = "complete"
+            return
+
+    def move_entities(self):
+        """Animate the entities moving across the map. Subclasses should use this.
+        """
+        # Assume units have moved.
+        self.finished_moving_entities = True
+
+    def animate_mission_complete(self):
+        """Animate the mission complete message.
+        Other classes should subclass this.
+        """
+
+        # If the sign hasn't been shown yet, start.
+        if self.mission_complete_display_progress == "not started":
+            self.mission_complete_display_progress = "in progress"
+            return
+
+        # If the sign is being shown, assume it completed.
+        if self.mission_complete_display_progress == "in progress":
+            self.mission_complete_display_progress = "complete"
+            return
+
+    def reset_for_new_round(self):
+        """Reset the state for the new round.
+        """
+
+        # Tell the mission controller to reset for the new round.
+        self.mission_controller.reset_for_new_round()
+
+        # Reset!
+        self.player_input = None
+        self.other_entity_move_results = None
+        self.finished_moving_entities = False

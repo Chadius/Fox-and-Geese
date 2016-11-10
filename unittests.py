@@ -1,8 +1,8 @@
 import unittest
-from mission import MissionModel, MissionController
+from mission import MissionModel, MissionController, MissionView
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 import ai_controllers
-from mock import patch
+from mock import patch, Mock
 
 class EntityMovementTest(unittest.TestCase):
     def setUp(self):
@@ -734,6 +734,251 @@ class MissionControllerStateTest(unittest.TestCase):
 
         state = self.mission_controller.get_status()
         self.assertEqual(state["mission complete"], "player win")
+
+    def test_reset_for_new_round(self):
+        """After moving, reset the state for the new round.
+        """
+        self.mission_controller.player_input('w')
+        state = self.mission_controller.get_status()
+        self.assertEqual(state["player input"], "w")
+        self.assertTrue(state["fox moved"])
+
+        self.mission_controller.reset_for_new_round()
+        state = self.mission_controller.get_status()
+
+        self.assertTrue(state['map initialized'])
+        self.assertFalse(state['mission complete'])
+        self.assertFalse(state['fox moved'])
+        self.assertEqual(state['other entities moves'], {})
+        self.assertIsNone(state['player input'])
+
+
+class MissionViewTests(unittest.TestCase):
+    """Tests the graphical representation.
+    """
+
+    def setUp(self):
+        self.mission_view = MissionView()
+        self.mock_mission_controller = Mock()
+
+    def get_mission_controller_map_initialized(self):
+        """Returns a mission controller whose map is initialized.
+        """
+        self.mock_mission_controller.get_status.return_value = {
+            'map initialized':True,
+            "other entities moves": {},
+            "mission complete": None
+        }
+        self.mission_view.mission_controller = self.mock_mission_controller
+
+    def get_mission_controller_player_input(self):
+        """Creates a mission controller where the player is ready to add input.
+        """
+        self.get_mission_controller_map_initialized()
+        self.entity_moves = {
+            'fox': {
+                'x':1,
+                'y':0,
+                'is dead': False
+            },
+            'goose_000': {
+                'x':1,
+                'y':0,
+                'is dead': True
+            }
+        }
+        self.mock_mission_controller.get_status.return_value = {
+            'map initialized':True,
+            "other entities moves": self.entity_moves,
+            "mission complete": None
+        }
+        self.mock_mission_controller.apply_player_input.side_effect = {}
+        self.mission_view.mission_controller = self.mock_mission_controller
+
+    def get_mission_controller_player_waited(self):
+        """Creates a mission controller where the player waits.
+        """
+        self.get_mission_controller_player_input()
+        self.mission_view.mission_controller = self.mock_mission_controller
+        self.mission_view.update()
+        self.mission_view.update()
+        self.mission_view.apply_player_input('w')
+        self.mission_view.update()
+
+    def test_wait_for_initialization(self):
+        """Newly created MapView waits for initialization.
+        """
+        mission_view = MissionView()
+        status = mission_view.get_status()
+        self.assertEqual(status["mission controller initialized"], False)
+
+    def test_show_mission_start(self):
+        """Mission Controller has been initialized.
+        Mission View will try to show the Mission Start screen.
+        """
+        self.get_mission_controller_map_initialized()
+        self.mission_view.mission_controller = self.mock_mission_controller
+
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertTrue(status["mission controller initialized"])
+        self.assertTrue(status["showing mission start"])
+        self.assertFalse(status["finished showing mission start"])
+
+    def test_wait_for_mission_start_complete(self):
+        """Mission View is showing the Mission Start screen.
+        Mission View waits for the screen to finish.
+        """
+        self.get_mission_controller_map_initialized()
+
+        self.mission_view.mission_controller = self.mock_mission_controller
+
+        self.mission_view.update()
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertFalse(status["showing mission start"])
+        self.assertTrue(status["finished showing mission start"])
+
+    def test_wait_for_player_input(self):
+        """Make sure the MissionView is ready to accept player input when the player select screen is ready.
+        """
+        self.get_mission_controller_map_initialized()
+
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertFalse(status["waiting for player input"])
+
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertTrue(status["waiting for player input"])
+
+    def test_send_player_input(self):
+        """MissionView can pass in Player Input to the Mission Controller.
+        Confirm the Mission Controller recieves the input.
+        """
+        self.get_mission_controller_map_initialized()
+
+        self.mock_mission_controller.apply_player_input.side_effect = {}
+        self.mission_view.mission_controller = self.mock_mission_controller
+
+        self.mission_view.update()
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertTrue(status["waiting for player input"])
+        self.mission_view.apply_player_input('w')
+
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertFalse(status["waiting for player input"])
+        self.mission_view.mission_controller.player_input.assert_called_with('w')
+
+    def test_move_entities(self):
+        """Mission Controller returns a list of entities to move.
+        Mission View plans to move the entities.
+        """
+        self.get_mission_controller_player_waited()
+
+        status = self.mission_view.get_status()
+        self.assertFalse(status["entities have moved"])
+        self.assertEqual(status["entity moves"], self.entity_moves)
+
+    def test_wait_for_entities_to_move(self):
+        """Mission View moves the entities.
+        Mission View waits to move the entities before continuing.
+        """
+        self.get_mission_controller_player_waited()
+
+        status = self.mission_view.get_status()
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+        self.assertTrue(status["entities have moved"])
+
+    def test_mission_win(self):
+        """MissionController is in the Mission Win state.
+        MissionView will show the Mission Complete message.
+        """
+        self.get_mission_controller_player_waited()
+
+        self.mock_mission_controller.get_status.return_value = {
+            'map initialized':True,
+            "other entities moves": self.entity_moves,
+            "mission complete": "player win"
+        }
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertFalse(state["showing mission complete message"])
+        self.assertFalse(state["finished showing mission complete message"])
+        self.assertEqual(state["mission complete message id"], "win")
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertTrue(state["showing mission complete message"])
+        self.assertFalse(state["finished showing mission complete message"])
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertFalse(state["showing mission complete message"])
+        self.assertTrue(state["finished showing mission complete message"])
+
+    def test_mission_lose(self):
+        """MissionController is in the Mission Lose state.
+        MissionView will show the Failure message.
+        """
+        self.get_mission_controller_player_waited()
+
+        self.mock_mission_controller.get_status.return_value = {
+            'map initialized':True,
+            "other entities moves": self.entity_moves,
+            "mission complete": "player lose"
+        }
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertFalse(state["showing mission complete message"])
+        self.assertFalse(state["finished showing mission complete message"])
+        self.assertEqual(state["mission complete message id"], "lose")
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertTrue(state["showing mission complete message"])
+        self.assertFalse(state["finished showing mission complete message"])
+
+        self.mission_view.update()
+        state = self.mission_view.get_status()
+
+        self.assertFalse(state["showing mission complete message"])
+        self.assertTrue(state["finished showing mission complete message"])
+
+    def test_reset_status_for_new_round(self):
+        """Entities have moved but the mission is not complete. Ensure after resetting, the system is ready for player input.
+        """
+
+        # Wait for the entities to move
+        self.get_mission_controller_player_waited()
+
+        status = self.mission_view.get_status()
+        self.mission_view.update()
+        status = self.mission_view.get_status()
+
+        self.assertTrue(status["entities have moved"])
+        self.mission_view.reset_for_new_round()
+
+        status = self.mission_view.get_status()
+        self.assertTrue(status["mission controller initialized"])
+        self.assertFalse(status["showing mission start"])
+        self.assertTrue(status["finished showing mission start"])
+        self.assertTrue(status["waiting for player input"])
+        self.assertEqual(status["entity moves"], None)
+        self.assertFalse(status["entities have moved"])
+        self.assertFalse(status["showing mission complete message"])
+        self.assertFalse(status["finished showing mission complete message"])
+        self.assertIsNone(status["mission complete message id"])
 
 if __name__ == '__main__':
     unittest.main()

@@ -58,3 +58,5 @@ Mission Start to finish displaying
 Player Input
 Finish Animating This Round's Results
 Show Mission Complete message
+
+Make a testable base view class. Kivy class will inherit the class and draw stuff.
