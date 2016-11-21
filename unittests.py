@@ -752,13 +752,54 @@ class MissionControllerStateTest(unittest.TestCase):
         self.assertEqual(state['other entities moves'], {})
         self.assertIsNone(state['player input'])
 
+class TestMissionView(MissionView):
+    """Testable implementation of MissionView.
+    """
+    def __init__(self):
+        super(TestMissionView, self).__init__()
+        self.draw_mission_start = self.draw_mission_start_impl
+        self.move_entities = self.move_entities_impl
+        self.animate_mission_complete = self.animate_mission_complete_impl
+
+    def draw_mission_start_impl(self):
+        """Draw the mission start banner.
+        """
+        # If it hasn't started, start it now
+        if self.mission_start_status == "not started":
+            self.mission_start_status = "in progress"
+            return
+
+        # If it's in progress, declare it complete
+        if self.mission_start_status == "in progress":
+            self.mission_start_status = "complete"
+            return
+
+    def move_entities_impl(self):
+        """Animate the entities moving across the map.
+        """
+        # Assume units have moved.
+        self.finished_moving_entities = True
+
+    def animate_mission_complete_impl(self):
+        """Animate the mission complete message.
+        """
+
+        # If the sign hasn't been shown yet, start.
+        if self.mission_complete_display_progress == "not started":
+            self.mission_complete_display_progress = "in progress"
+            return
+
+        # If the sign is being shown, assume it completed.
+        if self.mission_complete_display_progress == "in progress":
+            self.mission_complete_display_progress = "complete"
+            return
 
 class MissionViewTests(unittest.TestCase):
     """Tests the graphical representation.
     """
 
     def setUp(self):
-        self.mission_view = MissionView()
+        self.mission_view = TestMissionView()
         self.mock_mission_controller = Mock()
 
     def get_mission_controller_map_initialized(self):
@@ -808,7 +849,7 @@ class MissionViewTests(unittest.TestCase):
     def test_wait_for_initialization(self):
         """Newly created MapView waits for initialization.
         """
-        mission_view = MissionView()
+        mission_view = TestMissionView()
         status = mission_view.get_status()
         self.assertEqual(status["mission controller initialized"], False)
 

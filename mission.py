@@ -342,8 +342,9 @@ class MissionController():
         self.other_entity_move_results = {}
         self.player_desired_direction = None
 
-class MissionView:
+class MissionView(object):
     """Visual representation of the mission.
+    This class has some function pointers that need to be set by a subclass.
     """
     def __init__(self):
         self.mission_controller = None
@@ -362,6 +363,11 @@ class MissionView:
 
         # Track the state of the mission complete message. It should have 3 states: "not started", "in progress" or "complete".
         self.mission_complete_display_progress = "not started"
+
+        # Function Pointers that must be overriden by a subclass.
+        self.draw_mission_start = lambda s: None
+        self.move_entities = lambda s: None
+        self.animate_mission_complete = lambda s: None
 
     def update(self):
         """This function will be called periodically to update the state or wait for animation to complete.
@@ -468,51 +474,6 @@ class MissionView:
             "mission complete message id": mission_complete_message_id,
         }
 
-    def apply_player_input(self, player_input):
-        """If the mission is accepting player input, it will be passed to the mission controller.
-        """
-        # If we're waiting for player input, accept it.
-        status = self.get_status()
-
-        if status["waiting for player input"]:
-            self.player_input = player_input
-            # Pass the player input to the controller.
-            self.mission_controller.player_input(player_input)
-
-    def draw_mission_start(self):
-        """Draw the mission start banner. Subclasses should implement this function.
-        """
-        # If it hasn't started, start it now
-        if self.mission_start_status == "not started":
-            self.mission_start_status = "in progress"
-            return
-
-        # If it's in progress, declare it complete
-        if self.mission_start_status == "in progress":
-            self.mission_start_status = "complete"
-            return
-
-    def move_entities(self):
-        """Animate the entities moving across the map. Subclasses should use this.
-        """
-        # Assume units have moved.
-        self.finished_moving_entities = True
-
-    def animate_mission_complete(self):
-        """Animate the mission complete message.
-        Other classes should subclass this.
-        """
-
-        # If the sign hasn't been shown yet, start.
-        if self.mission_complete_display_progress == "not started":
-            self.mission_complete_display_progress = "in progress"
-            return
-
-        # If the sign is being shown, assume it completed.
-        if self.mission_complete_display_progress == "in progress":
-            self.mission_complete_display_progress = "complete"
-            return
-
     def reset_for_new_round(self):
         """Reset the state for the new round.
         """
@@ -524,3 +485,15 @@ class MissionView:
         self.player_input = None
         self.other_entity_move_results = None
         self.finished_moving_entities = False
+
+    def apply_player_input(self, player_input):
+        """If the mission is accepting player input, it will be passed to the mission controller.
+        """
+        # If we're waiting for player input, accept it.
+        status = self.get_status()
+
+        if status["waiting for player input"]:
+            self.player_input = player_input
+            # Pass the player input to the controller.
+            self.mission_controller.player_input(player_input)
+

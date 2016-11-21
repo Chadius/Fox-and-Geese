@@ -26,37 +26,11 @@ After you win or lose, only the Title Screen button is available.
 During a map, you have up down left right buttons.
 * Timetable
 1 month: Proof of Concept. [2016-11-05 Sat]
+Hmm, I thought I would have it ready by now. I need faster tools!
+
 3 months: Builds on multiple platforms (Alpha?)
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
 * Development TODOs
-** Mission Controller
-Add unit tests to move an Entity 1 space.
-- Test against a wall
-
-*** MissionView
-
-Needs to know the mission model so it knows the size of the map.
-Needs to know where ot get resources to build sprites.
+** MissionView
 Needs to track the sprites.
-
-Needs to be aware of updates.
-
-Has to know when to say
-MISSION START
-MISSION COMPLETE
-FAILURE
-
-Has to know when to pass player input to the mission controller
-Has to know when to ask the other entities to move
-Has to animate the sprites moving around
-Has to animate the sprites dying
-
-Build a variable that shows what the view is waiting for.
-Mission Controller to be initialized
-Mission Start to finish displaying
-Player Input
-Finish Animating This Round's Results
-Show Mission Complete message
-
-Make a testable base view class. Kivy class will inherit the class and draw stuff.
