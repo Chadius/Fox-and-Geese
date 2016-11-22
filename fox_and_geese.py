@@ -141,7 +141,7 @@ class KivyMissionView(FloatLayout):
         # Update the mission view.
         self.update_mission_view()
 
-    def update_mission_view(self):
+    def update_mission_view(self, dt=0.0):
         """Updates the mission view so we know what to do next.
         """
 
@@ -274,7 +274,6 @@ class KivyMissionView(FloatLayout):
             ),
             2.0
         )
-        pass
 
     def make_mission_start_widget(self):
         """Creates a Widget to show the mission start.
@@ -292,15 +291,28 @@ class KivyMissionView(FloatLayout):
         self.remove_widget(self.mission_start_widget)
 
         # Tell the layout to update.
-        # TODO
-        pass
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.update_mission_view,
+                self
+            ),
+            0.5
+        )
 
     def accept_player_input(self, player_input):
         """Callback to accept player input. player_input is a string indicating which direction the player wants to move in.
         """
         # Pass in the input using mission_view.apply_player_input()
+        self.mission_view.apply_player_input(player_input)
+
         # Tell the mission_view to update
-        pass
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.update_mission_view,
+                self
+            ),
+            0.5
+        )
 
     def move_entities_impl(self):
         """Animate the entities moving across the map.
@@ -312,6 +324,7 @@ class KivyMissionView(FloatLayout):
         # Read which units moved, and where.
         # Start moving them!
         # Make a callback when the units finished moving.
+        print "TODO: Move entities"
         pass
 
     def move_entities_finished_callback(self):

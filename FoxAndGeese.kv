@@ -57,30 +57,39 @@
 				spacing: 0
 				Button:
 					text: "UL"
+					on_release: root.accept_player_input('UL')
 				Button:
 					text: "U"
+					on_release: root.accept_player_input('U')
 				Button:
 					text: "UR"
+					on_release: root.accept_player_input('UR')
 			BoxLayout:
 				orientation: 'horizontal'
 				padding: 0
 				spacing: 0
 				Button:
 					text: "L"
+					on_release: root.accept_player_input('L')
 				Button:
 					text: "W"
+					on_release: root.accept_player_input('W')
 				Button:
 					text: "R"
+					on_release: root.accept_player_input('R')
 			BoxLayout:
 				orientation: 'horizontal'
 				padding: 0
 				spacing: 0
 				Button:
 					text: "DL"
+					on_release: root.accept_player_input('DL')
 				Button:
 					text: "D"
+					on_release: root.accept_player_input('D')
 				Button:
 					text: "DR"
+					on_release: root.accept_player_input('DR')
 		Button:
 			text: "Return to title"
 			size_hint: 1,0.3
