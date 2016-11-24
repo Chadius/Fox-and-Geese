@@ -88,6 +88,7 @@ class KivyMissionView(FloatLayout):
             'resource': 'g_icon.png'
         }
         self.sprite_info_by_id = {}
+        self.started_moving_sprites = False
 
     def setup_mission(self):
         """Creates the underlying MissionView.
@@ -306,36 +307,109 @@ class KivyMissionView(FloatLayout):
         self.mission_view.apply_player_input(player_input)
 
         # Tell the mission_view to update
+
+        # Update once to apply input and figure out how the units moved.
         Clock.schedule_once(
             partial(
                 KivyMissionView.update_mission_view,
                 self
             ),
-            0.5
+            0.2
+        )
+
+        # Now actually move the units.
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.update_mission_view,
+                self
+            ),
+            0.2
         )
 
     def move_entities_impl(self):
         """Animate the entities moving across the map.
         """
 
-        # If we have started moving already, return (and print a message)
+        # If we have started moving already, return
+        if self.started_moving_sprites:
+            return
 
         # Get the mission_view status.
-        # Read which units moved, and where.
-        # Start moving them!
-        # Make a callback when the units finished moving.
-        print "TODO: Move entities"
-        pass
+        status = self.mission_view.get_status()
 
-    def move_entities_finished_callback(self):
+        # Read which units moved, and where.
+        max_animation_time = 2.0
+        for entity_id in status["entity moves"]:
+            # Start moving them.
+            the_sprite = self.sprite_info_by_id[entity_id]
+
+            final_position = self.get_screen_coordinates_from_grid(
+                self.mission_model,
+                status["entity moves"][entity_id]['x'],
+                status["entity moves"][entity_id]['y'],
+            )
+
+            # Scroll the unit moving over
+            scroll_animation = Animation(
+                x=final_position[0],
+                y=final_position[1]
+            )
+            # Use it on widget
+            scroll_animation.start(the_sprite)
+
+        # Make a callback when the units finished moving.
+        self.started_moving_sprites = True
+
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.move_entities_finished_callback,
+                self
+            ),
+            max_animation_time
+        )
+
+    def move_entities_finished_callback(self, dt=0.0):
         """Call back function when the entities have finished moving.
         """
 
         # If the entities aren't moving already, return (and print a message)
+        if not self.started_moving_sprites:
+            print "Sprites haven't finished moving. Why was this called?"
+            return
 
-        # If the mission is complete, set up a callback to animate the mission complete.
+        # Tell the mission view we finished moving.
+        self.mission_view.finished_moving_entities = True
+
+        # Set up a callback to update the status.
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.update_mission_view,
+                self
+            ),
+            0.1
+        )
+
+        # Set up another callback to see if the round should be reset.
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.reset_for_new_round,
+                self
+            ),
+            0.2
+        )
+
+    def reset_for_new_round(self, dt=0.0):
+        """Reset the mission view for a new round if the mission is not yet complete.
+        """
+
+        # If the mission is complete, return
+        mission_view_status = self.mission_view.get_status()
+        if mission_view_status["mission complete message id"]:
+            return
+
         # If the mission isn't complete, call mission_view.reset_for_new_round() and wait for more player input.
-        pass
+        self.mission_view.reset_for_new_round()
+        self.started_moving_sprites = False
 
     def animate_mission_complete_impl(self):
         """Animate the mission complete message.
