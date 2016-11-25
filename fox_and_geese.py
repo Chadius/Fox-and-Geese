@@ -104,11 +104,22 @@ class KivyMissionView(FloatLayout):
         self.mission_model.all_entities_by_id['fox'].resource_id = 'fox'
 
         # Add some Geese.
-        self.goose_0 = Entity(position={'x':0, 'y':0}, entity_type='goose')
+        self.goose_0 = Entity(position={'x':1, 'y':0}, entity_type='goose')
         self.goose_0.collision_behavior = GooseCollisionResolver(self.goose_0)
         self.mission_model.all_entities_by_id['goose_000'] = self.goose_0
         self.mission_model.all_entities_by_id['goose_000'].resource_id = 'goose'
-        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000'))
+
+        self.goose_001 = Entity(position={'x':3, 'y':0}, entity_type='goose')
+        self.goose_001.collision_behavior = GooseCollisionResolver(self.goose_0)
+        self.mission_model.all_entities_by_id['goose_001'] = self.goose_001
+        self.mission_model.all_entities_by_id['goose_001'].resource_id = 'goose'
+
+        self.goose_002 = Entity(position={'x':2, 'y':1}, entity_type='goose')
+        self.goose_002.collision_behavior = GooseCollisionResolver(self.goose_0)
+        self.mission_model.all_entities_by_id['goose_002'] = self.goose_002
+        self.mission_model.all_entities_by_id['goose_002'].resource_id = 'goose'
+
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000', 'goose_001', 'goose_002'))
 
         # Make a new mission controller
         self.mission_controller = MissionController(mission_model = self.mission_model)
@@ -340,6 +351,8 @@ class KivyMissionView(FloatLayout):
         # Read which units moved, and where.
         max_animation_time = 2.0
         for entity_id in status["entity moves"]:
+            entity_animation = None
+
             # Start moving them.
             the_sprite = self.sprite_info_by_id[entity_id]
 
@@ -355,7 +368,20 @@ class KivyMissionView(FloatLayout):
                 y=final_position[1]
             )
             # Use it on widget
-            scroll_animation.start(the_sprite)
+            if entity_animation == None:
+                entity_animation = scroll_animation
+            else:
+                entity_animation += scroll_animation
+
+            # If any units died, fade them out.
+            if status["entity moves"][entity_id]['is dead']:
+                fade_animation = Animation(size=(0,0), t='in_quad')
+                if entity_animation == None:
+                    entity_animation = fade_animation
+                else:
+                    entity_animation += fade_animation
+
+            entity_animation.start(the_sprite)
 
         # Make a callback when the units finished moving.
         self.started_moving_sprites = True
@@ -414,21 +440,56 @@ class KivyMissionView(FloatLayout):
     def animate_mission_complete_impl(self):
         """Animate the mission complete message.
         """
-        # TODO: Make sure the mission complete banner is ready.
+        # Make sure the mission complete banner is ready.
+        status = self.mission_view.get_status()
+        if status["showing mission complete message"] or not status["mission complete message id"]:
+            print "Why did we call the animate mission copmlete impl?"
+            return
+        print "Mission Complete!"
 
         # Set up the text for the mission complete message.
+        mission_complete_text = "you lose..."
+
+        if status["mission complete message id"] == "win":
+            mission_complete_text = "YOU WIN!"
+
+        self.mission_complete_widget = self.make_mission_complete_widget(mission_complete_text)
+        self.mission_complete_widget.pos=(-300,0)
+        self.ids['mission_complete'] = self.mission_complete_widget
+        self.add_widget(self.mission_complete_widget)
+        mission_complete_widget = self.mission_complete_widget
 
         # Move the mission complete message to its proper location.
+        scroll_animation = Animation(x=0, y=0)
+        scroll_animation.start(mission_complete_widget)
+
+        # Tell the mission view the banner is now in progress.
+        self.mission_view.mission_complete_display_progress = "in progress"
 
         # Set up a callback to finish the animation.
-        pass
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.animate_mission_complete_finished_callback,
+                self
+            ),
+            2.0
+        )
 
-    def animate_mission_complete_finished_callback(self):
+    def make_mission_complete_widget(self, message):
+        """Creates a Widget to show the mission start.
+        """
+        return Label(text=message)
+
+    def animate_mission_complete_finished_callback(self, dt=0.0):
         """Callback when the Mission Complete banner finishes.
         """
         # If the banner is complete, return (and print an error message)
-        # Remove the mission complete banner
-        pass
+        status = self.mission_view.get_status()
+        if not status["showing mission complete message"] or status["finished showing mission complete message"]:
+            print "We played the mission complete finished callback. Why?"
+            return
+
+        self.mission_view.mission_complete_display_progress = "complete"
 
 class FoxAndGeeseApp(App):
     def build(self):
