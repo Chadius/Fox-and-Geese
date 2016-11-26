@@ -120,7 +120,7 @@ class MissionModel:
                 all_objects_by_x_y[pos_x][pos_y] = []
             all_objects_by_x_y[pos_x][pos_y].append(entity)
 
-        # For each location
+        # For each location, see if there are multiple entities on the same spot.
         for pos_x in all_objects_by_x_y:
             for pos_y in all_objects_by_x_y[pos_x]:
                 # If there are 2 or more items there
@@ -130,6 +130,39 @@ class MissionModel:
                         'colliding objects':all_objects_by_x_y[pos_x][pos_y],
                         'x':pos_x,
                         'y':pos_y
+                    }
+                    # Add new collision to existing ones
+                    self.collisions.append(new_collision)
+
+        # For each entity, see if it switched positions with another entity.
+        for entity_a_id in self.all_entities_by_id:
+            for entity_b_id in self.all_entities_by_id:
+                # You can't cross yourself
+                if entity_a_id == entity_b_id:
+                    continue
+                # Check the previous positions
+                a_pos_x = self.all_entities_by_id[entity_a_id].position_x
+                a_pos_y = self.all_entities_by_id[entity_a_id].position_y
+                a_previous_pos_x = self.all_entities_by_id[entity_a_id].position_history[-1]['x']
+                a_previous_pos_y = self.all_entities_by_id[entity_a_id].position_history[-1]['y']
+
+                b_pos_x = self.all_entities_by_id[entity_b_id].position_x
+                b_pos_y = self.all_entities_by_id[entity_b_id].position_y
+                b_previous_pos_x = self.all_entities_by_id[entity_b_id].position_history[-1]['x']
+                b_previous_pos_y = self.all_entities_by_id[entity_b_id].position_history[-1]['y']
+
+                # If A's old pos is B's current pos and B's old pos is A's current pos, they switched.
+                if (
+                        a_previous_pos_x == b_pos_x \
+                        and a_previous_pos_y == b_pos_y \
+                        and a_pos_x == b_previous_pos_x \
+                        and a_pos_y == b_previous_pos_y \
+                ):
+                    # Add this to the collisions.
+                    new_collision = {
+                        'colliding objects':[self.all_entities_by_id[entity_b_id], self.all_entities_by_id[entity_a_id]],
+                        'x':a_pos_x,
+                        'y':a_pos_y
                     }
                     # Add new collision to existing ones
                     self.collisions.append(new_collision)
@@ -146,7 +179,7 @@ class MissionModel:
         for collision_info in self.collisions:
             # For each entity in the collision,
             for entity in collision_info['colliding objects']:
-                # Ask the entity resolve its collision and collect the results
+                # Ask the entity to resolve its collision and collect the results
                 if not entity in collision_info:
                     collision_resolutions[entity] = []
                 results = entity.resolve_collisions(collision_info)

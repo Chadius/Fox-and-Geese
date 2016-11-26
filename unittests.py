@@ -250,6 +250,42 @@ class FoxGooseCollisionBehavior(unittest.TestCase):
         self.assertEqual(self.goose_1.is_dead, False)
         self.assertEqual(self.goose_2.is_dead, False)
 
+    def test_one_goose_and_one_fox_switch_positions_makes_one_dead_goose(self):
+        """A fox and goose are right next to each other. They switch positions. The goose should be dead.
+        """
+
+        # If the fox bumps into 1 goose, mark the goose as dead
+
+        # Move 1 goose into the fox.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='R'
+        )
+        self.mission_model.try_to_move_entity(
+            id='fox',
+            direction='L'
+        )
+        self.mission_model.move_all_entities()
+
+        # Confirm the goose is not dead
+        self.assertEqual(self.goose_0.is_dead, False)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # The goose should be dead
+        self.assertEqual(self.goose_0.is_dead, True)
+
+        # The fox should NOT be dead
+        self.assertEqual(self.fox_entity.is_dead, False)
+
+        # Other geese should NOT be dead
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, False)
+
     def test_two_geese_and_fox_makes_two_dead_geese(self):
         # If the fox bumps into 2 geese, mark the geese as dead
 
