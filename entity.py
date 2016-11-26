@@ -53,8 +53,8 @@ class FoxCollisionResolver(CollisionResolver):
             if colliding_entity == self.entity:
                 continue
 
-            # Count the geese
-            if colliding_entity.entity_type == 'goose':
+            # Count the living geese
+            if colliding_entity.entity_type == 'goose' and not colliding_entity.is_dead:
                 goose_count += 1
 
         # If there are 3 geese, You are dead

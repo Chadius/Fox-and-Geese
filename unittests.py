@@ -321,6 +321,44 @@ class FoxGooseCollisionBehavior(unittest.TestCase):
         # The fox should be dead
         self.assertEqual(self.fox_entity.is_dead, True)
 
+    def test_three_dead_geese_and_fox_makes_one_living_fox(self):
+        # If three geese surround the fox, but one is dead, the fox lives
+
+        # Move 3 geese into the fox.
+        self.mission_model.try_to_move_entity(
+            id='goose_000',
+            direction='R'
+        )
+        self.mission_model.try_to_move_entity(
+            id='goose_001',
+            direction='L'
+        )
+        self.goose_2.is_dead = True
+        self.mission_model.try_to_move_entity(
+            id='goose_002',
+            direction='D'
+        )
+        self.mission_model.move_all_entities()
+
+        # Confirm the geese are not dead
+        self.assertEqual(self.goose_0.is_dead, False)
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, True)
+
+        # Check for collisions
+        self.mission_model.find_collisions()
+
+        # Ask Mission Controller for entities to act on the collisions
+        self.mission_model.resolve_collisions()
+
+        # The geese are unchanged
+        self.assertEqual(self.goose_0.is_dead, False)
+        self.assertEqual(self.goose_1.is_dead, False)
+        self.assertEqual(self.goose_2.is_dead, True)
+
+        # The fox should not be dead
+        self.assertEqual(self.fox_entity.is_dead, False)
+
     @patch.object(MissionModel, '_get_random_entity')
     def test_two_geese_makes_one_move_ahead(self, _get_random_entity):
         # If two geese bump into each other, one of them moves ahead while the other one retreats.
@@ -468,14 +506,14 @@ class GroupAITests(unittest.TestCase):
         self.mission_model.all_ai_by_id['fox'] = ai_controllers.AlwaysWait(self.mission_model, 'fox')
 
         # Add AI for the Geese so they work together as a unit.
-        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000', 'goose_001', 'goose_002'))
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000', 'goose_001', 'goose_002'])
 
     def test_one_goose_moves_toward_fox(self):
         """Add one goose and one fox.
         Ask the AI to process.
         The AI should tell the goose to approach the fox.
         """
-        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000'))
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000'])
         self.mission_model.ask_all_ai_for_next_move()
         next_moves = self.mission_model.all_ai_by_id['goose'].get_next_moves()
         self.assertEqual(next_moves, {
@@ -678,7 +716,7 @@ class MissionControllerStateTest(unittest.TestCase):
         self.goose_0 = Entity(position={'x':0, 'y':0}, entity_type='goose')
         self.goose_0.collision_behavior = GooseCollisionResolver(self.goose_0)
         self.mission_model.all_entities_by_id['goose_000'] = self.goose_0
-        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000'))
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000'])
 
         self.mission_controller = MissionController(mission_model = self.mission_model)
 
@@ -751,6 +789,28 @@ class MissionControllerStateTest(unittest.TestCase):
         self.assertFalse(state['fox moved'])
         self.assertEqual(state['other entities moves'], {})
         self.assertIsNone(state['player input'])
+
+    def test_reset_for_new_round_removes_dead(self):
+        """Reset the state for the new round and remove dead units.
+        """
+        # Add another Goose.
+        self.goose_1 = Entity(position={'x':1, 'y':0}, entity_type='goose')
+        self.goose_1.collision_behavior = GooseCollisionResolver(self.goose_1)
+        self.mission_model.all_entities_by_id['goose_001'] = self.goose_1
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000', 'goose_001'])
+
+        # Fox stands still. The goose should move into it and die.
+        self.mission_controller.player_input('w')
+        self.mission_controller.move_ai_entities()
+        state = self.mission_controller.get_status()
+
+        self.mission_controller.reset_for_new_round()
+        state = self.mission_controller.get_status()
+
+        # Fox should still be alive, there should only be 1 goose around.
+        self.assertFalse(self.fox_entity.is_dead)
+        self.assertFalse("goose_001" in self.mission_model.all_entities_by_id)
+        self.assertFalse("goose_001" in self.mission_model.all_ai_by_id['goose'].entity_ids)
 
 class TestMissionView(MissionView):
     """Testable implementation of MissionView.

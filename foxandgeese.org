@@ -32,5 +32,6 @@ Hmm, I thought I would have it ready by now. I need faster tools!
 6 months: Prototype (Beta?)
 1 year: Game complete ready to ship.
 * Development TODOs
+I click the button and there is lag before the sprites move. Need to pay attention to the states.
 ** MissionView
 Needs to track the sprites.

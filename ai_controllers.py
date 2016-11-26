@@ -27,6 +27,12 @@ class AIController():
         """
         self.next_moves_by_entity_id = {}
 
+    def delete_entities(self, entity_ids_to_delete):
+        """Remove the given entities from consideration.
+        Subclasses should overwrite this.
+        """
+        pass
+
 class AlwaysWait(AIController):
     """AI will always wait.
     """
@@ -47,6 +53,9 @@ class ChaseTheFox(AIController):
         self.entity_ids = entity_id
 
     def determine_next_moves(self):
+        # Clear out previous round's instructions
+        self.next_moves_by_entity_id = {}
+
         # Because you can move in eight directions, move towards the fox.
         fox_entity = self.mission_model.all_entities_by_id['fox']
 
@@ -83,6 +92,13 @@ class ChaseTheFox(AIController):
 
             # Store this result for later.
             self.next_moves_by_entity_id[entity_id] = final_direction
+
+    def delete_entities(self, entity_ids_to_delete):
+        """Remove the given entities from consideration.
+        Subclasses should overwrite this.
+        """
+        for id in entity_ids_to_delete:
+            self.entity_ids.remove(id)
 
 class ManualInstructions(AIController):
     """AI waits for an instruction.

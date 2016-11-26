@@ -119,7 +119,7 @@ class KivyMissionView(FloatLayout):
         self.mission_model.all_entities_by_id['goose_002'] = self.goose_002
         self.mission_model.all_entities_by_id['goose_002'].resource_id = 'goose'
 
-        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ('goose_000', 'goose_001', 'goose_002'))
+        self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000', 'goose_001', 'goose_002'])
 
         # Make a new mission controller
         self.mission_controller = MissionController(mission_model = self.mission_model)
@@ -314,6 +314,12 @@ class KivyMissionView(FloatLayout):
     def accept_player_input(self, player_input):
         """Callback to accept player input. player_input is a string indicating which direction the player wants to move in.
         """
+
+        # If the mission view is not accepting player input, return
+        status = self.mission_view.get_status()
+        if not status["waiting for player input"]:
+            return
+
         # Pass in the input using mission_view.apply_player_input()
         self.mission_view.apply_player_input(player_input)
 
@@ -434,8 +440,18 @@ class KivyMissionView(FloatLayout):
             return
 
         # If the mission isn't complete, call mission_view.reset_for_new_round() and wait for more player input.
+        status = self.mission_view.get_status()
+
         self.mission_view.reset_for_new_round()
         self.started_moving_sprites = False
+
+        # Delete any sprites that correspond to non existent units.
+        sprites_to_delete = [id for id in self.sprite_info_by_id if not id in self.mission_model.all_entities_by_id]
+
+        for sprite_id in sprites_to_delete:
+            sprite_to_delete = self.sprite_info_by_id[sprite_id]
+            self.remove_widget(sprite_to_delete)
+            del self.sprite_info_by_id[sprite_id]
 
     def animate_mission_complete_impl(self):
         """Animate the mission complete message.

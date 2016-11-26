@@ -16,6 +16,21 @@ class MissionModel:
         self.all_ai_by_id = {}
         """All of the entity AI. Note these ids are different from the entity_id."""
 
+    def delete_dead_entities(self):
+        """Look at all entities and remove the dead ones.
+        Return a list of the deleted entites
+        """
+        dead_entities = [e for e in self.all_entities_by_id if self.all_entities_by_id[e].is_dead]
+
+        # Tell the ai_controllers to delete their entities.
+        for ai in self.all_ai_by_id:
+            self.all_ai_by_id[ai].delete_entities(dead_entities)
+
+        # Actually delete them
+        for e in dead_entities:
+            del self.all_entities_by_id[e]
+        return dead_entities
+
     def try_to_move_entity(self, id, direction):
         # Set up a pending move for the given Entity.
         # Does not actually move all units until you call move_all_units()
@@ -341,6 +356,9 @@ class MissionController():
         self.fox_moved = False
         self.other_entity_move_results = {}
         self.player_desired_direction = None
+
+        # Remove all dead units.
+        self.dead_entities = self.mission_model.delete_dead_entities()
 
 class MissionView(object):
     """Visual representation of the mission.
