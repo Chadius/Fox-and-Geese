@@ -1,8 +1,11 @@
+from mock import patch, Mock
 import unittest
+
+import yaml
+
 from mission import MissionModel, MissionController, MissionView
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 import ai_controllers
-from mock import patch, Mock
 
 class EntityMovementTest(unittest.TestCase):
     def setUp(self):
@@ -1116,6 +1119,87 @@ class MissionViewTests(unittest.TestCase):
         self.assertFalse(status["showing mission complete message"])
         self.assertFalse(status["finished showing mission complete message"])
         self.assertIsNone(status["mission complete message id"])
+
+class MissionModelDynamicLoadTest(unittest.TestCase):
+    """Tests that Mission Models can be dynamically loaded.
+    """
+    def test_map_loads_with_yaml(self):
+        """Digest a yaml document and confirm the model has the right dimensions and Entities.
+        """
+
+        mission_yaml_file = """
+campaign:
+  mission ids:
+    - mission 1
+missions:
+  mission 1:
+    map height: 2
+    map width: 5
+    fox:
+      position:
+        x: 2
+        y: 0
+    geese:
+      -
+        position:
+          x: 1
+          y: 0
+      -
+        position:
+          x: 3
+          y: 0
+      -
+        position:
+          x: 2
+          y: 1
+"""
+
+        # Make a mission model with info for mission 1.
+        mission_model = MissionModel()
+        mission_model.load_mission("mission 1", mission_yaml_file)
+
+        # Confirm the mission model has the correct stats.
+        self.assertEqual(mission_model.grid_width, 5)
+        self.assertEqual(mission_model.grid_height, 2)
+
+        # Confirm a Fox Entity was loaded.
+        self.assertTrue('fox' in mission_model.all_entities_by_id)
+        self.assertTrue('fox' in mission_model.all_ai_by_id)
+
+        fox_entity = mission_model.all_entities_by_id['fox']
+        self.assertEqual(fox_entity.position_x, 2)
+        self.assertEqual(fox_entity.position_y, 0)
+        self.assertTrue(isinstance(mission_model.all_ai_by_id['fox'], ai_controllers.ManualInstructions))
+
+        # Confirm Goose Entities were loaded.
+        goose_data = {
+            'goose_000': {
+                'x': 1,
+                'y': 0,
+            },
+            'goose_001': {
+                'x': 3,
+                'y': 0,
+            },
+            'goose_002': {
+                'x': 2,
+                'y': 1,
+            }
+        }
+
+        for goose_id in goose_data:
+            self.assertTrue(goose_id in mission_model.all_entities_by_id)
+
+            goose_entity = mission_model.all_entities_by_id[goose_id]
+            self.assertEqual(goose_entity.position_x, goose_data[goose_id]['x'])
+            self.assertEqual(goose_entity.position_y, goose_data[goose_id]['y'])
+
+        # Confirm there is an AI controller maintaining all geese.
+        self.assertTrue('goose' in mission_model.all_ai_by_id)
+        self.assertTrue(isinstance(mission_model.all_ai_by_id['goose'], ai_controllers.ChaseTheFox))
+
+        for goose_id in goose_data:
+            self.assertIn(goose_id, mission_model.all_ai_by_id['goose'].entity_ids)
 
 if __name__ == '__main__':
     unittest.main()

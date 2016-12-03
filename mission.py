@@ -1,11 +1,26 @@
+"""Requires the PyYAML module.
+
+class_data = open('classData.yaml')
+classes_yaml = yaml.load(class_data)
+
+"""
 import random
+
+import yaml
+
+import ai_controllers
+from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 
 class MissionModel:
     # Information needed to track the status of a mission.
     def __init__(self, width=5, height=2):
+        self.reset()
         self.grid_width = width
         self.grid_height = height
 
+    def reset(self):
+        """Reset all variables.
+        """
         self.fox_entity = None
 
         self.all_entities_by_id = {}
@@ -15,6 +30,55 @@ class MissionModel:
 
         self.all_ai_by_id = {}
         """All of the entity AI. Note these ids are different from the entity_id."""
+
+    def load_mission(self, mission_id, yaml_document):
+        """Populate the mission model based on the mission_id and the provided yaml_document.
+        """
+        # Clear all fields that maintain state.
+        self.reset()
+
+        # Find the mission yaml located in the document.
+        yaml_object = yaml.load(yaml_document)
+        mission_data = yaml_object['missions'][mission_id]
+
+        # Get the height and width.
+        self.grid_height = mission_data['map height']
+        self.grid_width = mission_data['map width']
+
+        # Find the Fox's starting position.
+        fox_data = mission_data['fox']
+        fox_position_x = fox_data['position']['x']
+        fox_position_y = fox_data['position']['y']
+
+        # Add a Fox.
+        fox_entity = Entity(position={'x':2, 'y':0}, entity_type='fox')
+        fox_entity.collision_behavior = FoxCollisionResolver(fox_entity)
+        self.all_entities_by_id['fox'] = fox_entity
+        self.all_entities_by_id['fox'].resource_id = 'fox'
+
+        # Give it an AI controller.
+        self.all_ai_by_id['fox'] = ai_controllers.ManualInstructions(self, 'fox')
+
+        # Find the Geese.
+        all_goose_data = mission_data['geese']
+        goose_ids = []
+
+        for goose_data in all_goose_data:
+            goose_id = "goose_%03d" % len(goose_ids)
+            goose_ids.append(goose_id)
+
+            # Get their starting positions.
+            goose_position_x = goose_data['position']['x']
+            goose_position_y = goose_data['position']['y']
+
+            # Add the goose.
+            goose = Entity(position={'x':goose_position_x, 'y':goose_position_y}, entity_type='goose')
+            goose.collision_behavior = GooseCollisionResolver(goose)
+            self.all_entities_by_id[goose_id] = goose
+            self.all_entities_by_id[goose_id].resource_id = 'goose'
+
+        # Give them AI controllers.
+        self.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self, goose_ids)
 
     def delete_dead_entities(self):
         """Look at all entities and remove the dead ones.

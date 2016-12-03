@@ -16,6 +16,33 @@ from mission import MissionModel, MissionController, MissionView
 from entity import Entity, FoxCollisionResolver, GooseCollisionResolver
 import ai_controllers
 
+mission_yaml_file = """
+campaign:
+  mission ids:
+    - mission 1
+missions:
+  mission 1:
+    map height: 4
+    map width: 5
+    fox:
+      position:
+        x: 2
+        y: 0
+    geese:
+      -
+        position:
+          x: 1
+          y: 0
+      -
+        position:
+          x: 3
+          y: 0
+      -
+        position:
+          x: 2
+          y: 1
+"""
+
 class TitleScreen(FloatLayout):
     def on_release_go_to_mission(self):
         # Start the mission.
@@ -27,9 +54,10 @@ class GameController(FloatLayout):
     def __init__ (self, *args, **kwargs):
         super(GameController, self).__init__(*args, **kwargs)
         # Add a function to draw it when ready
-        Clock.schedule_once(partial(GameController.callback_switch_to_game,self), 0.0)
-    def callback_switch_to_game(self, dt):
-        self.switch_to_mission()
+        Clock.schedule_once(partial(GameController.callback_switch_to_title,self), 0.0)
+
+    def callback_switch_to_title(self, dt):
+        self.switch_to_title()
 
     def switch_to_title(self):
         # User wants to switch to the title screen.
@@ -47,6 +75,7 @@ class GameController(FloatLayout):
         # Add it.
         self.ids['title_screen'] = title_screen_controller
         self.add_widget(title_screen_controller)
+
     def switch_to_mission(self):
         # User wants to switch to the mission screen.
 
@@ -94,6 +123,19 @@ class KivyMissionView(FloatLayout):
         """Creates the underlying MissionView.
         """
         # Make a mission model.
+        self.mission_model = MissionModel()
+        self.mission_model.load_mission("mission 1", mission_yaml_file)
+
+        # Make a new mission controller
+        self.mission_controller = MissionController(mission_model = self.mission_model)
+
+        # A contained Mission View to delegate calls.
+        self.mission_view = MissionView()
+        self.mission_view.mission_controller = self.mission_controller
+
+    def oldSetup(self):
+        """DELETE ME
+        """
         self.mission_model = MissionModel(width=5, height=2)
 
         # Add a Fox.
@@ -120,13 +162,6 @@ class KivyMissionView(FloatLayout):
         self.mission_model.all_entities_by_id['goose_002'].resource_id = 'goose'
 
         self.mission_model.all_ai_by_id['goose'] = ai_controllers.ChaseTheFox(self.mission_model, ['goose_000', 'goose_001', 'goose_002'])
-
-        # Make a new mission controller
-        self.mission_controller = MissionController(mission_model = self.mission_model)
-
-        # A contained Mission View to delegate calls.
-        self.mission_view = MissionView()
-        self.mission_view.mission_controller = self.mission_controller
 
     def on_size(self, instance, value):
         """Redraw the screen when resized.
@@ -461,7 +496,6 @@ class KivyMissionView(FloatLayout):
         if status["showing mission complete message"] or not status["mission complete message id"]:
             print "Why did we call the animate mission copmlete impl?"
             return
-        print "Mission Complete!"
 
         # Set up the text for the mission complete message.
         mission_complete_text = "you lose..."
@@ -506,6 +540,16 @@ class KivyMissionView(FloatLayout):
             return
 
         self.mission_view.mission_complete_display_progress = "complete"
+        self.remove_widget(self.mission_complete_widget)
+
+        # Update the mission view.
+        Clock.schedule_once(
+            partial(
+                KivyMissionView.update_mission_view,
+                self
+            ),
+            0.1
+        )
 
 class FoxAndGeeseApp(App):
     def build(self):
